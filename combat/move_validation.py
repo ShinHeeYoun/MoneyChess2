@@ -13,10 +13,17 @@ def get_valid_moves(board: BoardGrid, start_row: int, start_col: int, is_player:
         target = board.grid[r][c]
         if not target:
             return False
-        if is_player:
-            return target in ai_pieces
-        else:
-            return target in player_pieces
+            
+        enemy_list = ai_pieces if is_player else player_pieces
+        
+        if target in enemy_list:
+            if target.piece_type == PieceType.KING:
+                nobles = [PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN]
+                for p in enemy_list:
+                    if p.piece_type in nobles:
+                        return False # Royal Guard active: King is treated as an impassable/non-targetable obstacle
+            return True
+        return False
             
     def is_empty(r, c):
         return not board.is_occupied(r, c)

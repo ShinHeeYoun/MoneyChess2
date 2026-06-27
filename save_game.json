@@ -1,28 +1,16 @@
 {
-    "current_stage": 3,
-    "current_gold": 308,
+    "current_stage": 2,
+    "current_gold": 291,
     "pieces": [
         {
-            "id": "2a0f0bac-f1da-44bc-83e4-7e7baf45fec3",
+            "id": "b1abd061-2d12-4c6f-80b8-510ad7275d8b",
             "piece_type": "King",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "f23d8f6c-40c6-45a3-b9c3-9bf955ac0c0c",
-            "piece_type": "Rook",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "1fad509f-8844-4283-adc5-099592ba63af",
-            "piece_type": "Bishop",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "49ff7a5c-72a2-4cde-8809-7aca27476a5f",
-            "piece_type": "Rook",
+            "id": "cf8ba5a2-8c8f-4b24-92c9-71e7a23d3056",
+            "piece_type": "Queen",
             "status": "ACTIVE",
             "current_injury_turns": 0
         }

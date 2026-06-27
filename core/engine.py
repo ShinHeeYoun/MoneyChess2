@@ -120,7 +120,7 @@ class GameEngine:
                     continue
                 if sellable_index >= 10:
                     break
-                rect = pygame.Rect(400, 150 + sellable_index * 40, 200, 30)
+                rect = pygame.Rect(700, 150 + sellable_index * 40, 200, 30)
                 self.buttons.append(UIButton(rect, f"Sell {piece.piece_type.value} (+{piece.sell_value}g)", self.small_font, self.action_sell_piece, (piece.id,)))
                 sellable_index += 1
                 
@@ -354,7 +354,7 @@ class GameEngine:
         self.screen.blit(shop_title, (20, 120))
             
         roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, (255, 255, 255))
-        self.screen.blit(roster_title, (400, 120))
+        self.screen.blit(roster_title, (700, 120))
         
     def draw_stage_select_ui(self):
         title = self.font.render("Select Tactical Contract", True, (255, 255, 255))
