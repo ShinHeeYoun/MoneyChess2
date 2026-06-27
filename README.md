@@ -44,3 +44,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 6.7: Critical Turn 0 Defeat Bug and King Deployment Guard
 - Engineered strict Turn 0 initialization guard within check_victory_condition() rejecting evaluation of empty unit matrices during combat transition.\n- Integrated King unit automatic initialization upon New Game protocol resolving zero-king combat states.\n- Developed robust Deployment sequence validation blocking 'Commence Battle' state progression if the company commander (King) is not physically mapped to a valid grid coordinate on the player's side.
 
+## [2026-06-27] Patch 6.8: Combat State Machine and Alpha Rendering Corrections
+- Rectified Match Termination Failure by pruning the Turn 0 Initialization Guard from check_victory_condition() which caused logic circumvention on list evaluation.\n- Fixed screen washout rendering regression by moving hover/alpha overlays to draw strictly after piece textures with proper pygame.SRCALPHA blending.\n- Fixed 'Double Action' state machine desync by replacing blocking pygame.time.delay(500) with a non-blocking frame timer (ai_turn_start_time), ensuring state changes draw cleanly without thread freezes.
+

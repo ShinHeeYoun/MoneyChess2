@@ -39,6 +39,7 @@ class GameEngine:
         
         self.casualty_results = []
         self.combat_reward = 0
+        self.ai_turn_start_time = 0
         
         self.buttons = []
         self.contract_previews = []
@@ -274,8 +275,11 @@ class GameEngine:
     def update(self, dt: float):
         if self.state == GameState.COMBAT:
             if not self.combat.is_player_turn and not self.combat.outcome:
-                pygame.time.delay(500)
-                self.combat.execute_ai_turn()
+                if self.ai_turn_start_time == 0:
+                    self.ai_turn_start_time = pygame.time.get_ticks()
+                elif pygame.time.get_ticks() - self.ai_turn_start_time >= 500:
+                    self.combat.execute_ai_turn()
+                    self.ai_turn_start_time = 0
             
             if self.combat.outcome:
                 self.casualty_results = self.hospital.process_casualties(self.combat.capture_buffer.captured_player_units, self.roster)
@@ -369,9 +373,13 @@ class GameEngine:
                 rect = pygame.Rect(x, y, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
                 pygame.draw.rect(self.screen, color, rect)
                 
-                # Hover Highlight
+                if self.board.is_occupied(row, col):
+                    piece = self.board.grid[row][col]
+                    is_player = self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id))
+                    self._draw_piece(piece.piece_type.value, is_player, rect)
+                
+                # Hover and Selection Highlight
                 if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT]):
-                    # Check if hovered tile is valid contextually
                     is_valid_hover = False
                     if self.state == GameState.DEPLOYMENT and row in config.PLAYER_DEPLOY_ROWS and not self.board.is_occupied(row, col) and self.deployment_manager.dragging_piece:
                         is_valid_hover = True
@@ -382,15 +390,9 @@ class GameEngine:
                             is_valid_hover = True
                             
                     if is_valid_hover:
-                        overlay = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
-                        overlay.set_alpha(100)
-                        overlay.fill((255, 255, 0))
+                        overlay = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE), pygame.SRCALPHA)
+                        overlay.fill((255, 255, 0, 100))
                         self.screen.blit(overlay, rect)
-                
-                if self.board.is_occupied(row, col):
-                    piece = self.board.grid[row][col]
-                    is_player = self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id))
-                    self._draw_piece(piece.piece_type.value, is_player, rect)
                     
     def draw_deployment_ui(self):
         self.draw_board(show_zones=True)
