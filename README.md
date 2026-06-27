@@ -124,3 +124,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 10.1: GameEngine Draw Method Signature Hotfix
 - Corrected a critical runtime TypeError within main.py caused by a missing delta time parameter during frame loop execution.\n- Aligned engine.draw(dt) initialization with Phase 10 frame-rate independent pipeline adjustments.\n- Injected dt: float = 1/60.0 default fallback parameters into core/engine.py's method signature to gracefully resolve unparameterized legacy calls.
 
+## [2026-06-27] Patch 10.2: GameEngine Background Color Hotfix
+- Reverted invalid config.BACKGROUND_COLOR reference back to a native RGB tuple (30, 30, 30) within the core/engine.py draw method to resolve the AttributeError crash.
+
