@@ -4,6 +4,9 @@ import config
 from units.roster import RosterManager
 from economy.economy_manager import EconomyManager
 from economy.shop_generator import ShopManager
+from deployment.board_grid import BoardGrid
+from deployment.deployment_manager import DeploymentManager
+from deployment.ai_formations import AIFormationGenerator
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
@@ -19,6 +22,10 @@ class GameEngine:
         self.economy = EconomyManager()
         self.shop = ShopManager(self.economy, self.roster)
         
+        self.board = BoardGrid()
+        self.deployment_manager = DeploymentManager(self.board, self.roster)
+        self.ai_generator = AIFormationGenerator(self.board)
+        
         self.shop.generate_shop()
         
     def handle_events(self, events):
@@ -26,8 +33,30 @@ class GameEngine:
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
-                if self.state == GameState.MANAGEMENT:
+                if event.key == pygame.K_RETURN:
+                    self.transition_state()
+                elif self.state == GameState.MANAGEMENT:
                     self.handle_management_input(event)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if self.state == GameState.DEPLOYMENT:
+                    if event.button == 1: # Left click
+                        self.deployment_manager.handle_mouse_down(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if self.state == GameState.DEPLOYMENT:
+                    if event.button == 1:
+                        self.deployment_manager.handle_mouse_up(event.pos)
+                        
+    def transition_state(self):
+        if self.state == GameState.MANAGEMENT:
+            if not self.economy.is_bankrupt:
+                self.state = GameState.DEPLOYMENT
+                print("Transitioned to DEPLOYMENT")
+                self.ai_generator.generate_formation()
+            else:
+                print("Cannot deploy while bankrupt!")
+        elif self.state == GameState.DEPLOYMENT:
+            self.state = GameState.COMBAT
+            print("Transitioned to COMBAT")
                     
     def handle_management_input(self, event):
         if event.key == pygame.K_r:
@@ -65,13 +94,17 @@ class GameEngine:
             print(f"Failed to buy piece at slot {index + 1}.")
                 
     def update(self, dt: float):
-        pass
+        if self.state == GameState.DEPLOYMENT:
+            # Use mouse position from pygame directly for drag visuals
+            pass
         
     def draw(self):
         self.screen.fill((30, 30, 30))
         
         if self.state == GameState.MANAGEMENT:
             self.draw_management_ui()
+        elif self.state == GameState.DEPLOYMENT:
+            self.draw_deployment_ui()
             
         pygame.display.flip()
         
@@ -101,3 +134,57 @@ class GameEngine:
         for i, piece in enumerate(self.roster.get_active_units()[:10]): # Show up to 10
             piece_surf = self.font.render(f"{piece.piece_type.value} (Sell: {piece.sell_value}g)", True, (150, 150, 255))
             self.screen.blit(piece_surf, (420, 160 + i * 40))
+            
+        enter_msg = self.font.render("Press ENTER to proceed to Deployment", True, (200, 255, 200))
+        self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
+            
+    def draw_deployment_ui(self):
+        # Draw 8x8 Grid
+        for row in range(8):
+            for col in range(8):
+                x = config.BOARD_OFFSET_X + col * config.GRID_SQUARE_SIZE
+                y = config.BOARD_OFFSET_Y + row * config.GRID_SQUARE_SIZE
+                
+                # Checkered pattern
+                color = (200, 200, 200) if (row + col) % 2 == 0 else (100, 100, 100)
+                
+                # Highlight player deploy zone
+                if row in config.PLAYER_DEPLOY_ROWS:
+                    color = (color[0], color[1], color[2] + 50) if color[2] <= 205 else color
+                # Highlight AI deploy zone
+                elif row in config.AI_DEPLOY_ROWS:
+                    color = (color[0] + 50, color[1], color[2]) if color[0] <= 205 else color
+                    
+                pygame.draw.rect(self.screen, color, (x, y, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
+                
+                # Draw pieces on board
+                if self.board.is_occupied(row, col):
+                    piece = self.board.grid[row][col]
+                    piece_surf = self.font.render(piece.piece_type.value[:2], True, (0, 0, 0))
+                    self.screen.blit(piece_surf, (x + 20, y + 25))
+                    
+        # Draw Sidebar (Unplaced Units)
+        sidebar_title = self.font.render("Unplaced Units", True, (255, 255, 255))
+        self.screen.blit(sidebar_title, (20, 150))
+        
+        sidebar_x = 20
+        sidebar_y_start = 200
+        unplaced = self.deployment_manager.get_unplaced_active_units()
+        for i, piece in enumerate(unplaced):
+            # Skip drawing the one we are dragging
+            if self.deployment_manager.dragging_piece and self.deployment_manager.dragging_piece.id == piece.id:
+                continue
+            rect = pygame.Rect(sidebar_x, sidebar_y_start + i * 40, 150, 30)
+            pygame.draw.rect(self.screen, (100, 150, 200), rect)
+            label = self.font.render(piece.piece_type.value, True, (0, 0, 0))
+            self.screen.blit(label, (sidebar_x + 5, sidebar_y_start + i * 40 + 5))
+            
+        # Draw Dragging Piece
+        if self.deployment_manager.dragging_piece:
+            mx, my = pygame.mouse.get_pos()
+            # Simple text representation at mouse
+            drag_label = self.font.render(self.deployment_manager.dragging_piece.piece_type.value, True, (255, 255, 0))
+            self.screen.blit(drag_label, (mx - 20, my - 15))
+            
+        enter_msg = self.font.render("Press ENTER to proceed to Combat", True, (200, 255, 200))
+        self.screen.blit(enter_msg, (config.BOARD_OFFSET_X, config.WINDOW_HEIGHT - 40))

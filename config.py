@@ -12,6 +12,31 @@ STARTING_GOLD = 500
 SHOP_SIZE = 5
 SHOP_REROLL_COST = 10
 
+# Board Configurations
+GRID_SQUARE_SIZE = 80
+BOARD_OFFSET_X = (WINDOW_WIDTH - (8 * GRID_SQUARE_SIZE)) // 2
+BOARD_OFFSET_Y = (WINDOW_HEIGHT - (8 * GRID_SQUARE_SIZE)) // 2
+
+# Deployment Zones
+PLAYER_DEPLOY_ROWS = [6, 7]
+AI_DEPLOY_ROWS = [0, 1]
+
+# AI Formation Templates
+AI_FORMATIONS = {
+    "Vanguard": {
+        "front_row": ["Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn"],
+        "back_row": [None, "Knight", "Knight", "Queen", "King", "Knight", "Knight", None]
+    },
+    "Defensive": {
+        "front_row": [None, "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", None],
+        "back_row": ["Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"]
+    },
+    "Standard": {
+        "front_row": ["Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn", "Pawn"],
+        "back_row": ["Rook", "Knight", "Bishop", "Queen", "King", "Bishop", "Knight", "Rook"]
+    }
+}
+
 # Unit Economy & Properties
 UNIT_DATA = {
     "Pawn": {
