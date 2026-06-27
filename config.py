@@ -2,6 +2,7 @@
 MoneyChess2 Global Configuration
 """
 import os
+import pygame
 
 # Window settings
 WINDOW_WIDTH = 1280
@@ -15,9 +16,25 @@ ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", 
 SAVE_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save_game.json")
 
 # Button UI configurations
-BUTTON_COLOR_NEUTRAL = (70, 70, 70)
-BUTTON_COLOR_HOVER = (100, 100, 100)
-BUTTON_TEXT_COLOR = (255, 255, 255)
+BUTTON_COLOR_NEUTRAL = (30, 32, 34)
+BUTTON_COLOR_HOVER = (50, 52, 54)
+BUTTON_TEXT_COLOR = (240, 240, 240)
+
+# Modern Tactical Colors
+BACKGROUND_COLOR = (24, 26, 27)
+PANEL_COLOR = (18, 19, 20)
+PANEL_BORDER_COLOR = (80, 80, 80)
+ACCENT_COLOR = (218, 165, 32)
+TEXT_COLOR = (240, 240, 240)
+
+# Chess.com Palette
+COLOR_SQUARE_LIGHT = (238, 238, 212)
+COLOR_SQUARE_DARK = (118, 150, 86)
+
+# Layout Bounding Boxes
+LEFT_PANEL_RECT = pygame.Rect(0, 0, 300, WINDOW_HEIGHT)
+RIGHT_PANEL_RECT = pygame.Rect(WINDOW_WIDTH - 300, 0, 300, WINDOW_HEIGHT)
+CENTER_BOARD_RECT = pygame.Rect(300, 0, WINDOW_WIDTH - 600, WINDOW_HEIGHT)
 
 # Progression settings
 AI_STAGE_BUDGET_BASE = 100
@@ -48,8 +65,8 @@ VICTORY_CONDITION = "ELIMINATE_KING"
 
 # Board Configurations
 GRID_SQUARE_SIZE = 80
-BOARD_OFFSET_X = (WINDOW_WIDTH - (8 * GRID_SQUARE_SIZE)) // 2
-BOARD_OFFSET_Y = (WINDOW_HEIGHT - (8 * GRID_SQUARE_SIZE)) // 2
+BOARD_OFFSET_X = CENTER_BOARD_RECT.x + (CENTER_BOARD_RECT.width - (8 * GRID_SQUARE_SIZE)) // 2
+BOARD_OFFSET_Y = CENTER_BOARD_RECT.y + (CENTER_BOARD_RECT.height - (8 * GRID_SQUARE_SIZE)) // 2
 
 # Deployment Zones
 PLAYER_DEPLOY_ROWS = [6, 7]

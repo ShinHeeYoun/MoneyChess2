@@ -26,8 +26,14 @@ class UIButton:
             self.hover_factor = max(0.0, self.hover_factor - dt * 5.0)
             
         color = self._lerp_color(config.BUTTON_COLOR_NEUTRAL, config.BUTTON_COLOR_HOVER, self.hover_factor)
-        pygame.draw.rect(surface, color, self.rect)
-        pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
+        pygame.draw.rect(surface, color, self.rect, border_radius=6)
+        
+        # Alpha blended hover border
+        if self.hover_factor > 0:
+            border_color = self._lerp_color((100, 100, 100), (200, 200, 200), self.hover_factor)
+            pygame.draw.rect(surface, border_color, self.rect, 2, border_radius=6)
+        else:
+            pygame.draw.rect(surface, (80, 80, 80), self.rect, 2, border_radius=6)
         
         # Text rendering
         lines = self.text.split('\n')

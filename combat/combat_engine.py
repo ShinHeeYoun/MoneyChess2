@@ -21,6 +21,8 @@ class CombatEngine:
         self.selected_pos: Optional[Tuple[int, int]] = None
         self.valid_moves = []
         
+        self.dragging_piece = None
+        
         self.outcome = None # "VICTORY" or "DEFEAT"
         self.dead_in_retreat = []
         
@@ -28,8 +30,8 @@ class CombatEngine:
         self.capture_buffer.clear()
         self.is_player_turn = True
         self.selected_pos = None
-        self.selected_pos = None
         self.valid_moves = []
+        self.dragging_piece = None
         self.outcome = None
         self.dead_in_retreat = []
         
@@ -81,12 +83,14 @@ class CombatEngine:
         # If we click on an allied piece, we select it, overriding any current selection.
         if piece and self.is_player_piece(piece):
             self.selected_pos = (row, col)
+            self.dragging_piece = piece
             self.valid_moves = get_valid_moves(self.board, row, col, True, self.get_player_pieces_list(), self.get_ai_pieces_list())
         elif self.selected_pos and (row, col) in self.valid_moves:
             # Click-to-Move execution
             self.execute_move(self.selected_pos, (row, col))
             self.selected_pos = None
             self.valid_moves = []
+            self.dragging_piece = None
             self.check_end_turn()
         else:
             self.selected_pos = None
@@ -96,14 +100,14 @@ class CombatEngine:
         if not self.is_player_turn or self.outcome:
             return
             
-        if self.selected_pos:
-            # Drag-to-Move execution
-            if self.selected_pos != (row, col) and (row, col) in self.valid_moves:
+        if self.dragging_piece:
+            if self.selected_pos and self.selected_pos != (row, col) and (row, col) in self.valid_moves:
                 self.execute_move(self.selected_pos, (row, col))
                 self.selected_pos = None
                 self.valid_moves = []
                 self.check_end_turn()
-            # If they release on the exact same tile or an invalid tile, DO NOTHING (keep focus for Click-to-Move).
+                
+            self.dragging_piece = None
                 
     def execute_move(self, start_pos, target_pos):
         start_row, start_col = start_pos

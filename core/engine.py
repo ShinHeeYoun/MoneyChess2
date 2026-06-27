@@ -89,16 +89,23 @@ class GameEngine:
             for m in missing:
                 print(f"  - {m}")
                 
-    def _draw_piece(self, piece_type: str, is_player: bool, rect: pygame.Rect):
+    def _draw_piece(self, piece_type: str, is_player: bool, rect: pygame.Rect, lifted: bool = False):
         # Translate PieceType to filename prefix
         prefix = "w" if is_player else "b"
         key = f"{prefix}_{piece_type.lower()}"
         
         if key in self.assets:
-            self.screen.blit(self.assets[key], rect)
+            img = self.assets[key]
+            if lifted:
+                new_size = int(config.GRID_SQUARE_SIZE * 1.15)
+                img = pygame.transform.scale(img, (new_size, new_size))
+                img = img.copy()
+                img.set_alpha(200)
+                rect = img.get_rect(center=rect.center)
+            self.screen.blit(img, rect)
         else:
             # Absolute fallback text if sprite is missing
-            letter = self.font.render(piece_type[:1], True, (255, 255, 255))
+            letter = self.font.render(piece_type[:1], True, config.TEXT_COLOR)
             self.screen.blit(letter, letter.get_rect(center=rect.center))
 
     def _build_ui_for_state(self):
@@ -110,13 +117,13 @@ class GameEngine:
                 self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 100, 370, 200, 50), "Load Game", self.font, self.action_load_game))
                 
         elif self.state == GameState.MANAGEMENT:
-            self.buttons.append(UIButton(pygame.Rect(50, 60, 200, 50), "Reroll Shop (-10g)", self.font, self.action_reroll))
-            self.buttons.append(UIButton(pygame.Rect(50, 400, 200, 50), "Recruit Pawn (10g)", self.font, self.action_buy_pawn))
-            self.buttons.append(UIButton(pygame.Rect(300, 400, 200, 50), "Proceed to Map", self.font, self.action_proceed_to_map))
+            self.buttons.append(UIButton(pygame.Rect(50, 90, 200, 40), "Reroll Shop (-10g)", self.font, self.action_reroll))
+            self.buttons.append(UIButton(pygame.Rect(50, 420, 200, 40), "Recruit Pawn (10g)", self.font, self.action_buy_pawn))
+            self.buttons.append(UIButton(pygame.Rect(50, 600, 200, 50), "Proceed to Map", self.font, self.action_proceed_to_map))
             
             for i, piece_type in enumerate(self.shop_manager.current_shop):
                 cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
-                rect = pygame.Rect(50, 150 + i * 40, 200, 30)
+                rect = pygame.Rect(50, 180 + i * 40, 200, 30)
                 text = f"Buy {piece_type.value} (-{cost}g)"
                 self.buttons.append(UIButton(rect, text, self.small_font, self.action_buy_piece, (i,)))
                 
@@ -138,12 +145,12 @@ class GameEngine:
                     break
                 count = len(pieces)
                 sample = pieces[0]
-                rect = pygame.Rect(700, 220 + sellable_index * 40, 250, 30)
+                rect = pygame.Rect(1000, 160 + sellable_index * 40, 250, 30)
                 text = f"{pt_val} x{count} (Sell: +{sample.sell_value}g)"
                 self.buttons.append(UIButton(rect, text, self.small_font, self.action_sell_piece, (sample.id,)))
                 sellable_index += 1
                 
-            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Next Stage", self.font, self.action_next_stage))
+            self.buttons.append(UIButton(pygame.Rect(1000, 600, 200, 50), "Next Stage", self.font, self.action_next_stage))
             
         elif self.state == GameState.STAGE_SELECT:
             self.contract_previews = []
@@ -168,10 +175,10 @@ class GameEngine:
                 self.buttons.append(btn)
                 
         elif self.state == GameState.DEPLOYMENT:
-            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 250, config.WINDOW_HEIGHT - 80, 200, 50), "Battle Start", self.font, self.action_start_combat))
+            self.buttons.append(UIButton(pygame.Rect(1000, 600, 200, 50), "Battle Start", self.font, self.action_start_combat))
             
         elif self.state == GameState.COMBAT:
-            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Retreat", self.font, self.action_retreat))
+            self.buttons.append(UIButton(pygame.Rect(1000, 600, 200, 50), "Retreat", self.font, self.action_retreat))
             
         elif self.state == GameState.RESOLUTION:
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Confirm & Proceed", self.font, self.action_return_to_camp))
@@ -286,8 +293,8 @@ class GameEngine:
         
         act_count = len(self.roster.get_active_units())
         inj_count = len(self.roster.get_injured_units())
-        ros_txt = self.font.render(f"Roster (Active: {act_count}, Injured: {inj_count})", True, (255, 255, 255))
-        self.screen.blit(ros_txt, (700, 20))
+        ros_txt = self.font.render(f"Roster (Active: {act_count}, Injured: {inj_count})", True, config.TEXT_COLOR)
+        self.screen.blit(ros_txt, (1000, 60))
         
         # King Status Visibility Guard
         king = None
@@ -304,9 +311,9 @@ class GameEngine:
                 status_str = f"Status: INJURED ({king.current_injury_turns} turns left)"
                 color = (255, 150, 150)
             king_txt = self.small_font.render(f"Commander (King) - {status_str}", True, color)
-            self.screen.blit(king_txt, (700, 80))
+            self.screen.blit(king_txt, (1000, 100))
             
-        pygame.draw.line(self.screen, (100, 100, 100), (700, 120), (950, 120))
+        pygame.draw.line(self.screen, (100, 100, 100), (1000, 140), (1250, 140))
         
         if self.economy.current_gold <= 0 and act_count == 0 and inj_count == 0:
             self.state = GameState.GAME_OVER
@@ -395,7 +402,13 @@ class GameEngine:
         self.anim_engine.update(dt)
         
     def draw(self, dt: float = 1/60.0):
-        self.screen.fill((30, 30, 30))
+        self.screen.fill(config.BACKGROUND_COLOR)
+        
+        # Draw background panels
+        pygame.draw.rect(self.screen, config.PANEL_COLOR, config.LEFT_PANEL_RECT)
+        pygame.draw.rect(self.screen, config.PANEL_COLOR, config.RIGHT_PANEL_RECT)
+        pygame.draw.rect(self.screen, config.PANEL_BORDER_COLOR, config.LEFT_PANEL_RECT, 2)
+        pygame.draw.rect(self.screen, config.PANEL_BORDER_COLOR, config.RIGHT_PANEL_RECT, 2)
         
         if self.state == GameState.MANAGEMENT:
             self.draw_management_ui()
@@ -428,21 +441,21 @@ class GameEngine:
         
     def draw_management_ui(self):
         stage_surf = self.font.render(f"Stage {self.current_stage}", True, (200, 200, 255))
-        self.screen.blit(stage_surf, (config.WINDOW_WIDTH - 200, 20))
+        self.screen.blit(stage_surf, (1000, 20))
         
-        color = (255, 100, 100) if self.economy.is_bankrupt else (255, 255, 100)
+        color = (255, 100, 100) if self.economy.is_bankrupt else config.ACCENT_COLOR
         gold_surface = self.font.render(f"Gold: {self.economy.current_gold}", True, color)
         self.screen.blit(gold_surface, (20, 20))
         
         upkeep = self.economy.calculate_total_upkeep(self.roster)
         upkeep_surface = self.font.render(f"Upkeep: {upkeep}", True, (200, 200, 200))
-        self.screen.blit(upkeep_surface, (20, 60))
+        self.screen.blit(upkeep_surface, (20, 50))
         
-        shop_title = self.font.render("Shop", True, (255, 255, 255))
-        self.screen.blit(shop_title, (20, 120))
+        shop_title = self.font.render("Shop", True, config.TEXT_COLOR)
+        self.screen.blit(shop_title, (20, 150))
             
-        roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, (255, 255, 255))
-        self.screen.blit(roster_title, (700, 120))
+        roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, config.TEXT_COLOR)
+        self.screen.blit(roster_title, (1000, 60))
         
     def draw_stage_select_ui(self):
         title = self.font.render("Select Tactical Contract", True, (255, 255, 255))
@@ -457,7 +470,7 @@ class GameEngine:
                 x = config.BOARD_OFFSET_X + col * config.GRID_SQUARE_SIZE
                 y = config.BOARD_OFFSET_Y + row * config.GRID_SQUARE_SIZE
                 
-                color = (200, 200, 200) if (row + col) % 2 == 0 else (100, 100, 100)
+                color = config.COLOR_SQUARE_LIGHT if (row + col) % 2 == 0 else config.COLOR_SQUARE_DARK
                 
                 if show_zones:
                     if row in config.PLAYER_DEPLOY_ROWS:
@@ -484,13 +497,19 @@ class GameEngine:
                         mask_piece = True
                         
                     if not mask_piece:
-                        if self.state == GameState.COMBAT and piece.piece_type.value == "King":
-                            if self.combat.is_king_guarded(is_player):
-                                aura = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE), pygame.SRCALPHA)
-                                aura.fill((218, 165, 32, 120))
-                                self.screen.blit(aura, rect)
-                                
-                        self._draw_piece(piece.piece_type.value, is_player, rect)
+                        is_dragging_in_combat = (self.state == GameState.COMBAT and getattr(self.combat, "dragging_piece", None) == piece)
+                        if not is_dragging_in_combat:
+                            if self.state == GameState.COMBAT and piece.piece_type.value == "King":
+                                if self.combat.is_king_guarded(is_player):
+                                    aura = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE), pygame.SRCALPHA)
+                                    aura.fill((218, 165, 32, 120))
+                                    self.screen.blit(aura, rect)
+                                    
+                            self._draw_piece(piece.piece_type.value, is_player, rect)
+                
+                # Draw grid boundary
+                board_rect = pygame.Rect(config.BOARD_OFFSET_X, config.BOARD_OFFSET_Y, 8 * config.GRID_SQUARE_SIZE, 8 * config.GRID_SQUARE_SIZE)
+                pygame.draw.rect(self.screen, (10, 10, 10), board_rect, 2)
                 
                 # Hover and Selection Highlight
                 if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT]):
@@ -528,14 +547,21 @@ class GameEngine:
         if self.deployment_manager.dragging_piece:
             mx, my = pygame.mouse.get_pos()
             rect = pygame.Rect(mx - config.GRID_SQUARE_SIZE//2, my - config.GRID_SQUARE_SIZE//2, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
-            self._draw_piece(self.deployment_manager.dragging_piece.piece_type.value, True, rect)
-        
+            self._draw_piece(self.deployment_manager.dragging_piece.piece_type.value, True, rect, lifted=True)
+            
     def draw_combat_ui(self):
         self.draw_board(show_zones=False)
         turn_text = "PLAYER TURN" if self.combat.is_player_turn else "AI TURN"
         turn_color = (150, 255, 150) if self.combat.is_player_turn else (255, 150, 150)
         turn_surf = self.font.render(turn_text, True, turn_color)
-        self.screen.blit(turn_surf, (20, 20))
+        self.screen.blit(turn_surf, (1000, 20))
+        
+        # Lifted piece rendering for combat dragging
+        if getattr(self.combat, "dragging_piece", None):
+            mx, my = pygame.mouse.get_pos()
+            rect = pygame.Rect(mx - config.GRID_SQUARE_SIZE//2, my - config.GRID_SQUARE_SIZE//2, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
+            is_player = self.combat.is_player_piece(self.combat.dragging_piece)
+            self._draw_piece(self.combat.dragging_piece.piece_type.value, is_player, rect, lifted=True)
         
     def draw_resolution_ui(self):
         self.draw_combat_ui()

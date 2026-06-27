@@ -101,6 +101,18 @@ class DeploymentManager:
                                 self.board.place_piece(resident_piece, src_row, src_col)
                                 self.placed_pieces[resident_piece.id] = (src_row, src_col)
                             # Else resident piece goes back to cursor/sidebar (effectively unplaced)
+                else:
+                    # Invalid row, snap back
+                    if self.drag_source_pos:
+                        src_row, src_col = self.drag_source_pos
+                        self.board.place_piece(self.dragging_piece, src_row, src_col)
+                        self.placed_pieces[self.dragging_piece.id] = (src_row, src_col)
+            else:
+                # Off-board drop, snap back
+                if self.drag_source_pos:
+                    src_row, src_col = self.drag_source_pos
+                    self.board.place_piece(self.dragging_piece, src_row, src_col)
+                    self.placed_pieces[self.dragging_piece.id] = (src_row, src_col)
                             
             self.dragging_piece = None
             self.drag_source_pos = None
