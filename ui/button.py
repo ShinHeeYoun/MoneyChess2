@@ -8,7 +8,7 @@ class UIButton:
         self.font = font
         self.callback = callback
         self.callback_args = callback_args if callback_args else ()
-        self.is_hovered = False
+        self.is_hovered = self.rect.collidepoint(pygame.mouse.get_pos())
         self.hover_factor = 0.0
         
     def _lerp_color(self, c1, c2, t):

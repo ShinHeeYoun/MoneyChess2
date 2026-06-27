@@ -118,7 +118,15 @@ class GameEngine:
                 
         elif self.state == GameState.MANAGEMENT:
             self.buttons.append(UIButton(pygame.Rect(50, 90, 200, 40), "Reroll Shop (-10g)", self.font, self.action_reroll))
-            self.buttons.append(UIButton(pygame.Rect(50, 420, 200, 40), "Recruit Pawn (10g)", self.font, self.action_buy_pawn))
+            # Recruit Pawn Button
+            recruit_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
+            rect = pygame.Rect(50, 420, 200, 40)
+            self.buttons.append(UIButton(rect, f"Recruit Pawn ({recruit_cost}g)", self.small_font, self.action_buy_pawn))
+            
+            # Replenish Pawns Button
+            repl_rect = pygame.Rect(50, 470, 200, 40)
+            self.buttons.append(UIButton(repl_rect, "Replenish Pawns", self.small_font, self.action_replenish_pawns))
+            
             self.buttons.append(UIButton(pygame.Rect(50, 600, 200, 50), "Proceed to Map", self.font, self.action_proceed_to_map))
             
             for i, piece_type in enumerate(self.shop_manager.current_shop):
@@ -225,6 +233,11 @@ class GameEngine:
             self.anim_engine.start_shake(10.0)
             return
             
+        pawns = [p for p in self.roster.get_active_units() if p.piece_type.value == "Pawn"]
+        if len(pawns) >= 8:
+            self.anim_engine.start_shake(5.0)
+            return
+            
         cost = config.UNIT_DATA["Pawn"]["buy_cost"]
         if self.economy.subtract_gold(cost):
             from units.piece import PieceType, ChessPiece
@@ -232,6 +245,32 @@ class GameEngine:
             self.roster.add_piece(new_pawn)
             self.deployment_manager.auto_deploy()
             self.anim_engine.spawn_floating_text(150, 400, f"-{cost}g", self.font, (255, 50, 50))
+            self._build_ui_for_state()
+            
+    def action_replenish_pawns(self):
+        if self.economy.is_bankrupt:
+            self.anim_engine.start_shake(10.0)
+            return
+            
+        pawns = [p for p in self.roster.get_active_units() if p.piece_type.value == "Pawn"]
+        if len(pawns) >= 8:
+            self.anim_engine.start_shake(5.0)
+            return
+            
+        cost = config.UNIT_DATA["Pawn"]["buy_cost"]
+        bought_count = 0
+        while len(pawns) + bought_count < 8:
+            if self.economy.subtract_gold(cost):
+                from units.piece import PieceType, ChessPiece
+                new_pawn = ChessPiece(PieceType("Pawn"))
+                self.roster.add_piece(new_pawn)
+                bought_count += 1
+            else:
+                break
+                
+        if bought_count > 0:
+            self.deployment_manager.auto_deploy()
+            self.anim_engine.spawn_floating_text(150, 450, f"-{cost * bought_count}g", self.font, (255, 50, 50))
             self._build_ui_for_state()
             
     def action_sell_piece(self, piece_id):

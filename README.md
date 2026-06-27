@@ -147,3 +147,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Phase 12: Pre-Deployment Management Layer
 - Integrated chess board rendering natively into GameState.MANAGEMENT UI loops.\n- Refactored DeploymentManager.auto_deploy to act as an unplaced-unit injector rather than a destructive wipe, locating vacant row 6/7 spaces for new roster arrays.\n- Embedded auto_deploy execution paths directly into new game init, unit purchase hooks, and load states.\n- Expanded global Pygame event listeners mapping Drag-and-Drop pointer arrays through the Management loop, enabling tactile pre-deploy unit manipulation prior to contract locking.
 
+## [2026-06-27] Phase 13: Pawn Cap, Replenish Button, and Fast Click Fix
+- Resolved rapid-click ignoring on UIButton instances by instantly parsing collidepoint upon initialization instead of waiting for external MOUSEMOTION events.\n- Implemented 'Replenish Pawns' button mapping a while loop to repeatedly buy Pawns until reaching a cap of 8.\n- Injected rigorous max-pawn caps (8 units) across both Recruit Pawn and Replenish Pawns commands preventing roster bloat.
+
