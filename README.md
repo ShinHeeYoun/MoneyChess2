@@ -41,3 +41,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 6.6: Hotfix for Economy Method Signature Alignment
 - Rectified critical AttributeError occurring within action_buy_pawn button callback.\n- Aligned currency deduction interface to invoke self.economy.subtract_gold natively in adherence with Phase 2 EconomyManager standards.\n- Validated bankruptcy edge-cases for unlimited pawn generation against existing method parameters.
 
+## [2026-06-27] Patch 6.7: Critical Turn 0 Defeat Bug and King Deployment Guard
+- Engineered strict Turn 0 initialization guard within check_victory_condition() rejecting evaluation of empty unit matrices during combat transition.\n- Integrated King unit automatic initialization upon New Game protocol resolving zero-king combat states.\n- Developed robust Deployment sequence validation blocking 'Commence Battle' state progression if the company commander (King) is not physically mapped to a valid grid coordinate on the player's side.
+

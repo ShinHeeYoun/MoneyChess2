@@ -1,0 +1,54 @@
+{
+    "current_stage": 1,
+    "current_gold": 30,
+    "pieces": [
+        {
+            "id": "e24e2c17-12e1-4d21-b398-f91adb6e46b1",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "6653f23b-02c3-4d28-881c-0d68f0f20dce",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "94095bed-3e7d-44cf-9c6b-08b89b91c6df",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "fe44708b-787e-4e40-98e3-1c1422906430",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "8446bea6-ef9e-4011-8311-53955480ddc5",
+            "piece_type": "Bishop",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "591eeb04-a119-48a4-ac75-51a43fa0cd52",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "227c5077-3e23-43d5-ada9-73bd3894182e",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "3c4bf70d-50ca-482f-b8d9-8090e36d27e3",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        }
+    ]
+}

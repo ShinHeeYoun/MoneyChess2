@@ -148,9 +148,15 @@ class GameEngine:
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Return to Camp", self.font, self.action_return_to_camp))
 
     def action_new_game(self):
+        from units.piece import PieceType, ChessPiece
         self.current_stage = 1
         self.economy.current_gold = config.STARTING_GOLD
         self.roster.pieces.clear()
+        
+        # The King is the company commander; must be added initially
+        king = ChessPiece(PieceType.KING)
+        self.roster.add_piece(king)
+        
         self.shop.generate_shop()
         self.state = GameState.MANAGEMENT
         self._build_ui_for_state()
@@ -193,6 +199,20 @@ class GameEngine:
         self._build_ui_for_state()
         
     def action_start_combat(self):
+        # Deployment Guard: King Requirement
+        placed_pids = self.deployment_manager.placed_pieces.keys()
+        placed_pieces = [self.roster.get_piece(pid) for pid in placed_pids]
+        
+        has_king = False
+        for p in placed_pieces:
+            if p and p.piece_type.value == "King":
+                has_king = True
+                break
+                
+        if not has_king:
+            print("DEPLOYMENT WARNING: You must deploy your King on the active grid before commencing battle!")
+            return
+            
         self.state = GameState.COMBAT
         self.combat.start_combat()
         self._build_ui_for_state()

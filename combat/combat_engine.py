@@ -46,6 +46,10 @@ class CombatEngine:
         player_pieces = self.get_player_pieces_list()
         ai_pieces = self.get_ai_pieces_list()
         
+        # Turn 0 Initialization Guard
+        if not player_pieces or not ai_pieces:
+            return None
+            
         if config.VICTORY_CONDITION == "ELIMINATE_KING":
             player_king_dead = not any(p.piece_type == PieceType.KING for p in player_pieces)
             ai_king_dead = not any(p.piece_type == PieceType.KING for p in ai_pieces)
