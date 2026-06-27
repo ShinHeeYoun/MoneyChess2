@@ -1,82 +1,88 @@
 {
-    "current_stage": 4,
-    "current_gold": 734,
+    "current_stage": 5,
+    "current_gold": 733,
     "pieces": [
         {
-            "id": "139ce7b9-7ae1-4d0c-b003-5b2ddf461530",
+            "id": "a8df67d1-9f91-40f8-a57b-128ceffeda0b",
             "piece_type": "King",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "00c67070-11cc-4d56-89be-937fa6011b0d",
+            "id": "daec5c7a-00f3-4d15-9423-e22cb4c577be",
+            "piece_type": "Knight",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "71d05107-7880-4bda-8c9c-0eea6d5f53b2",
+            "piece_type": "Knight",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "a4cdfe07-3875-4e97-bb3c-7a75cfbd4f80",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "997a6f5a-5dab-43b2-bc57-70c1bad3804a",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "15eeba20-2ef4-4eb7-8d2d-bea92844a5d7",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "34493b63-1353-4e74-b8fa-77ce15fffe8c",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "91a798ca-e357-4880-ac8d-4ded6891368c",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "3fe249b7-d4e0-4b9c-8a7c-802fc64c7835",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "33982dee-778a-417e-9086-29dd39f04bb4",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "8114bb4a-06fd-42a1-a9ae-c76327328cd0",
+            "piece_type": "Pawn",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "468612ce-56aa-4567-8165-aca7ff339a20",
             "piece_type": "Rook",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "7e084a0d-e2b7-40e1-94c2-7f318c3ee96e",
-            "piece_type": "Knight",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "c59125bd-f7b2-424d-b143-d4e2a042954e",
+            "id": "c66b1ed6-7e72-40bc-9135-88a3eb94d2b5",
             "piece_type": "Pawn",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "610b20d8-e174-40df-b27e-d26de4e35533",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "749ab672-c39d-4c5b-947a-cacfea705878",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "a2cf0d82-a50c-456f-84ee-e214f987e5ef",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "e67c2806-4291-490b-940e-ee03a3195c12",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "b760bf6a-bdeb-4902-84aa-023b194288e6",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "33e47622-0eca-4e37-b82c-bd8e3407a264",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "e4244adf-4ca2-4048-96fb-ba8489ad4682",
-            "piece_type": "Pawn",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "ed7caedc-4bd6-481c-aa05-98c4f0fa17e8",
-            "piece_type": "Knight",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "5423321f-5d00-4a2d-89c4-749b721b56e8",
-            "piece_type": "Knight",
+            "id": "5a93d530-e408-4785-a69a-b7da3bfab3df",
+            "piece_type": "Queen",
             "status": "ACTIVE",
             "current_injury_turns": 0
         }

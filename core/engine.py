@@ -189,9 +189,9 @@ class GameEngine:
         self.economy.current_gold = config.STARTING_GOLD
         self.roster.pieces.clear()
         
-        # The King is the company commander; must be added initially
         king = ChessPiece(PieceType.KING)
         self.roster.add_piece(king)
+        self.deployment_manager.auto_deploy()
         
         self.shop_manager.generate_shop()
         self.state = GameState.MANAGEMENT
@@ -199,6 +199,7 @@ class GameEngine:
         
     def action_load_game(self):
         self.current_stage = SaveManager.load_game(self.economy, self.roster)
+        self.deployment_manager.auto_deploy()
         self.shop_manager.generate_shop()
         self.state = GameState.MANAGEMENT
         self._build_ui_for_state()
@@ -215,6 +216,7 @@ class GameEngine:
         piece_type = self.shop_manager.current_shop[index]
         cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
         if self.shop_manager.buy_piece(index):
+            self.deployment_manager.auto_deploy()
             self.anim_engine.spawn_floating_text(150, 150 + index * 40, f"-{cost}g", self.font, (255, 50, 50))
             self._build_ui_for_state()
             
@@ -228,6 +230,7 @@ class GameEngine:
             from units.piece import PieceType, ChessPiece
             new_pawn = ChessPiece(PieceType("Pawn"))
             self.roster.add_piece(new_pawn)
+            self.deployment_manager.auto_deploy()
             self.anim_engine.spawn_floating_text(150, 400, f"-{cost}g", self.font, (255, 50, 50))
             self._build_ui_for_state()
             
@@ -252,7 +255,6 @@ class GameEngine:
     def action_select_contract(self, index):
         self.selected_contract = self.contract_previews[index]
         self.state = GameState.DEPLOYMENT
-        self.deployment_manager.auto_deploy()
         self.ai_generator.apply_formation(self.selected_contract["preview"])
         self._build_ui_for_state()
         
@@ -349,14 +351,14 @@ class GameEngine:
                 
             # State specific mouse events
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.state == GameState.DEPLOYMENT:
+                if self.state in [GameState.DEPLOYMENT, GameState.MANAGEMENT]:
                     self.deployment_manager.handle_mouse_down(event.pos)
                 elif self.state == GameState.COMBAT:
                     grid_pos = self.board.screen_to_grid(*event.pos)
                     if grid_pos:
                         self.combat.handle_mouse_down(grid_pos[0], grid_pos[1])
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if self.state == GameState.DEPLOYMENT:
+                if self.state in [GameState.DEPLOYMENT, GameState.MANAGEMENT]:
                     self.deployment_manager.handle_mouse_up(event.pos)
                 elif self.state == GameState.COMBAT:
                     grid_pos = self.board.screen_to_grid(*event.pos)
@@ -411,6 +413,7 @@ class GameEngine:
         pygame.draw.rect(self.screen, config.PANEL_BORDER_COLOR, config.RIGHT_PANEL_RECT, 2)
         
         if self.state == GameState.MANAGEMENT:
+            self.draw_board(show_zones=True)
             self.draw_management_ui()
         elif self.state == GameState.STAGE_SELECT:
             self.draw_stage_select_ui()
@@ -456,6 +459,12 @@ class GameEngine:
             
         roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, config.TEXT_COLOR)
         self.screen.blit(roster_title, (1000, 60))
+        
+        # Lifted piece rendering for management dragging
+        if self.deployment_manager.dragging_piece:
+            mx, my = pygame.mouse.get_pos()
+            rect = pygame.Rect(mx - config.GRID_SQUARE_SIZE//2, my - config.GRID_SQUARE_SIZE//2, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
+            self._draw_piece(self.deployment_manager.dragging_piece.piece_type.value, True, rect, lifted=True)
         
     def draw_stage_select_ui(self):
         title = self.font.render("Select Tactical Contract", True, (255, 255, 255))
@@ -512,9 +521,9 @@ class GameEngine:
                 pygame.draw.rect(self.screen, (10, 10, 10), board_rect, 2)
                 
                 # Hover and Selection Highlight
-                if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT]):
+                if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT, GameState.MANAGEMENT]):
                     is_valid_hover = False
-                    if self.state == GameState.DEPLOYMENT and row in config.PLAYER_DEPLOY_ROWS and not self.board.is_occupied(row, col) and self.deployment_manager.dragging_piece:
+                    if self.state in [GameState.DEPLOYMENT, GameState.MANAGEMENT] and row in config.PLAYER_DEPLOY_ROWS and not self.board.is_occupied(row, col) and self.deployment_manager.dragging_piece:
                         is_valid_hover = True
                     elif self.state == GameState.COMBAT:
                         if self.combat.selected_pos and (row, col) in self.combat.valid_moves:

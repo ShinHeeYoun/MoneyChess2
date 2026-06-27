@@ -21,28 +21,22 @@ class DeploymentManager:
         return [p for p in active_units if p.id not in self.placed_pieces]
         
     def auto_deploy(self):
-        self.clear_deployment()
-        active_units = self.roster.get_active_units()
-        
-        from units.piece import PieceType
-        pawns = [p for p in active_units if p.piece_type == PieceType.PAWN]
-        nobles = [p for p in active_units if p.piece_type != PieceType.PAWN]
-        
-        # Deploy pawns to row 6
-        pawn_col = 0
-        for p in pawns:
-            if pawn_col < 8:
-                self.board.place_piece(p, 6, pawn_col)
-                self.placed_pieces[p.id] = (6, pawn_col)
-                pawn_col += 1
-                
-        # Deploy nobles to row 7
-        noble_col = 0
-        for n in nobles:
-            if noble_col < 8:
-                self.board.place_piece(n, 7, noble_col)
-                self.placed_pieces[n.id] = (7, noble_col)
-                noble_col += 1
+        unplaced = self.get_unplaced_active_units()
+        if not unplaced:
+            return
+            
+        available_slots = []
+        for row in config.PLAYER_DEPLOY_ROWS:
+            for col in range(8):
+                if not self.board.is_occupied(row, col):
+                    available_slots.append((row, col))
+                    
+        for p in unplaced:
+            if not available_slots:
+                break # No more room on board
+            row, col = available_slots.pop(0)
+            self.board.place_piece(p, row, col)
+            self.placed_pieces[p.id] = (row, col)
         
     def handle_mouse_down(self, pos: tuple):
         x, y = pos

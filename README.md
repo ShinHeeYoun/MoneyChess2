@@ -144,3 +144,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 11.1: Confirm & Proceed Crash Fix
 - Resolved a critical AttributeError crash occurring in action_return_to_camp caused by an invalid attribute reference (self.roster.units). Refactored to legally parse self.roster.pieces, restoring stable state transition out of the Resolution phase.
 
+## [2026-06-27] Phase 12: Pre-Deployment Management Layer
+- Integrated chess board rendering natively into GameState.MANAGEMENT UI loops.\n- Refactored DeploymentManager.auto_deploy to act as an unplaced-unit injector rather than a destructive wipe, locating vacant row 6/7 spaces for new roster arrays.\n- Embedded auto_deploy execution paths directly into new game init, unit purchase hooks, and load states.\n- Expanded global Pygame event listeners mapping Drag-and-Drop pointer arrays through the Management loop, enabling tactile pre-deploy unit manipulation prior to contract locking.
+
