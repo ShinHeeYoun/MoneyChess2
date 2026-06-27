@@ -19,6 +19,30 @@ class DeploymentManager:
         active_units = self.roster.get_active_units()
         return [p for p in active_units if p.id not in self.placed_pieces]
         
+    def auto_deploy(self):
+        self.clear_deployment()
+        active_units = self.roster.get_active_units()
+        
+        from units.piece import PieceType
+        pawns = [p for p in active_units if p.piece_type == PieceType.PAWN]
+        nobles = [p for p in active_units if p.piece_type != PieceType.PAWN]
+        
+        # Deploy pawns to row 6
+        pawn_col = 0
+        for p in pawns:
+            if pawn_col < 8:
+                self.board.place_piece(p, 6, pawn_col)
+                self.placed_pieces[p.id] = (6, pawn_col)
+                pawn_col += 1
+                
+        # Deploy nobles to row 7
+        noble_col = 0
+        for n in nobles:
+            if noble_col < 8:
+                self.board.place_piece(n, 7, noble_col)
+                self.placed_pieces[n.id] = (7, noble_col)
+                noble_col += 1
+        
     def handle_mouse_down(self, pos: tuple):
         x, y = pos
         # Check if clicking on an already placed piece to move it
@@ -52,9 +76,25 @@ class DeploymentManager:
             if grid_pos:
                 row, col = grid_pos
                 # Validate player drop zone
-                if row in config.PLAYER_DEPLOY_ROWS and not self.board.is_occupied(row, col):
-                    self.board.place_piece(self.dragging_piece, row, col)
-                    self.placed_pieces[self.dragging_piece.id] = (row, col)
+                if row in config.PLAYER_DEPLOY_ROWS:
+                    if not self.board.is_occupied(row, col):
+                        self.board.place_piece(self.dragging_piece, row, col)
+                        self.placed_pieces[self.dragging_piece.id] = (row, col)
+                    else:
+                        # Swap logic
+                        resident_piece = self.board.grid[row][col]
+                        if self.roster.get_piece(resident_piece.id):
+                            # Detach resident piece
+                            self.board.remove_piece(row, col)
+                            del self.placed_pieces[resident_piece.id]
+                            
+                            # Place dragged piece
+                            self.board.place_piece(self.dragging_piece, row, col)
+                            self.placed_pieces[self.dragging_piece.id] = (row, col)
+                            
+                            # Resident piece goes back to cursor/sidebar (effectively unplaced)
+                            # Do not re-assign dragging_piece to resident so we don't hold it, just leave it unplaced
+                            
             self.dragging_piece = None
             
     def clear_deployment(self):

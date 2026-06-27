@@ -1,52 +1,28 @@
 {
-    "current_stage": 5,
-    "current_gold": 332,
+    "current_stage": 3,
+    "current_gold": 308,
     "pieces": [
         {
-            "id": "a6f4ad14-fbbd-44cd-ab7b-bb6b9acdc688",
+            "id": "2a0f0bac-f1da-44bc-83e4-7e7baf45fec3",
             "piece_type": "King",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "bef75eab-492f-4b75-8f22-5c91194a234c",
+            "id": "f23d8f6c-40c6-45a3-b9c3-9bf955ac0c0c",
+            "piece_type": "Rook",
+            "status": "ACTIVE",
+            "current_injury_turns": 0
+        },
+        {
+            "id": "1fad509f-8844-4283-adc5-099592ba63af",
             "piece_type": "Bishop",
             "status": "ACTIVE",
             "current_injury_turns": 0
         },
         {
-            "id": "f14f5d13-739f-47d7-b8e3-5b11f94622af",
-            "piece_type": "Bishop",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "a566e35f-3373-4ca3-8362-4e9912134f3f",
-            "piece_type": "Knight",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "1c7afbee-eacc-40e1-9f1a-fb1df1708933",
-            "piece_type": "Bishop",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "7f43010b-01d5-48bc-9166-22a82d2d9a69",
-            "piece_type": "Bishop",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "c2ecb6c9-4709-49ef-871b-4a22701f0dd4",
-            "piece_type": "Bishop",
-            "status": "ACTIVE",
-            "current_injury_turns": 0
-        },
-        {
-            "id": "3eb043e5-4de5-4659-873e-7f5f4365aeb7",
-            "piece_type": "Bishop",
+            "id": "49ff7a5c-72a2-4cde-8809-7aca27476a5f",
+            "piece_type": "Rook",
             "status": "ACTIVE",
             "current_injury_turns": 0
         }

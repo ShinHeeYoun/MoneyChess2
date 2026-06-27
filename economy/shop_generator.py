@@ -55,6 +55,10 @@ class ShopManager:
     def sell_piece(self, piece_id: uuid.UUID) -> bool:
         piece = self.roster.get_piece(piece_id)
         if piece:
+            if piece.piece_type == PieceType.KING:
+                print("WARNING: You cannot sell the King!")
+                return False
+                
             self.economy.add_gold(piece.sell_value)
             self.roster.remove_piece(piece_id)
             return True

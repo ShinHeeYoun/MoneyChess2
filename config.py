@@ -72,15 +72,15 @@ UNIT_DATA = {
     "Pawn": {
         "buy_cost": 50,
         "sell_value": 25,
-        "upkeep": 2,
+        "upkeep": 1,
         "recovery_min": 1,
         "recovery_max": 1,
-        "shop_weight": 50
+        "shop_weight": 0
     },
     "Knight": {
         "buy_cost": 150,
         "sell_value": 75,
-        "upkeep": 6,
+        "upkeep": 3,
         "recovery_min": 1,
         "recovery_max": 2,
         "shop_weight": 20
@@ -88,7 +88,7 @@ UNIT_DATA = {
     "Bishop": {
         "buy_cost": 150,
         "sell_value": 75,
-        "upkeep": 6,
+        "upkeep": 3,
         "recovery_min": 1,
         "recovery_max": 2,
         "shop_weight": 20
@@ -96,7 +96,7 @@ UNIT_DATA = {
     "Rook": {
         "buy_cost": 250,
         "sell_value": 125,
-        "upkeep": 10,
+        "upkeep": 5,
         "recovery_min": 2,
         "recovery_max": 3,
         "shop_weight": 10
@@ -104,7 +104,7 @@ UNIT_DATA = {
     "Queen": {
         "buy_cost": 500,
         "sell_value": 250,
-        "upkeep": 20,
+        "upkeep": 9,
         "recovery_min": 3,
         "recovery_max": 4,
         "shop_weight": 2

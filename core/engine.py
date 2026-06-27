@@ -146,7 +146,7 @@ class GameEngine:
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 250, config.WINDOW_HEIGHT - 80, 200, 50), "Battle Start", self.font, self.action_start_combat))
             
         elif self.state == GameState.RESOLUTION:
-            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Return to Camp", self.font, self.action_return_to_camp))
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Confirm & Proceed", self.font, self.action_return_to_camp))
 
     def action_new_game(self):
         from units.piece import PieceType, ChessPiece
@@ -197,6 +197,7 @@ class GameEngine:
         self.selected_contract = self.contract_previews[index]
         self.state = GameState.DEPLOYMENT
         self.ai_generator.apply_formation(self.selected_contract["preview"])
+        self.deployment_manager.auto_deploy()
         self._build_ui_for_state()
         
     def action_start_combat(self):
@@ -424,7 +425,12 @@ class GameEngine:
         self.screen.blit(turn_surf, (20, 20))
         
     def draw_resolution_ui(self):
-        self.screen.fill((20, 20, 20))
+        self.draw_combat_ui()
+        
+        overlay = pygame.Surface((config.WINDOW_WIDTH, config.WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.screen.blit(overlay, (0, 0))
+        
         title = self.font.render(f"COMBAT RESOLUTION: {self.combat.outcome}", True, (255, 255, 255))
         self.screen.blit(title, (20, 20))
         
