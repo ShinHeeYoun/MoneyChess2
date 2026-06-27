@@ -18,7 +18,7 @@ def main():
         
         engine.handle_events(events)
         engine.update(dt)
-        engine.draw()
+        engine.draw(dt)
         
     pygame.quit()
     sys.exit()

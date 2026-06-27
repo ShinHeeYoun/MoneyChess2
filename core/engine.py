@@ -394,7 +394,7 @@ class GameEngine:
                 
         self.anim_engine.update(dt)
         
-    def draw(self, dt: float):
+    def draw(self, dt: float = 1/60.0):
         self.screen.fill(config.BACKGROUND_COLOR)
         
         if self.state == GameState.MANAGEMENT:
