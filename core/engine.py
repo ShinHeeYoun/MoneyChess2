@@ -1,4 +1,6 @@
 import pygame
+import os
+import sys
 from core.state import GameState
 import config
 from units.roster import RosterManager
@@ -9,15 +11,18 @@ from deployment.deployment_manager import DeploymentManager
 from deployment.ai_formations import AIFormationGenerator
 from combat.combat_engine import CombatEngine
 from casualty.hospital_system import CasualtyProcessor
+from persistence.save_manager import SaveManager
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
         self.screen = screen
-        self.state = GameState.MANAGEMENT # start in management for now
+        self.state = GameState.MAIN_MENU
         self.running = True
         
         pygame.font.init()
         self.font = pygame.font.SysFont(None, 36)
+        
+        self.current_stage = 1
         
         # Initialize modules
         self.roster = RosterManager()
@@ -31,16 +36,36 @@ class GameEngine:
         self.combat = CombatEngine(self.board, self.deployment_manager, self.ai_generator)
         self.hospital = CasualtyProcessor()
         
-        self.shop.generate_shop()
         self.casualty_results = []
         self.combat_reward = 0
+        
+    def quit_game(self):
+        self.running = False
+        pygame.quit()
+        sys.exit()
         
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.QUIT:
-                self.running = False
+                self.quit_game()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_ESCAPE:
+                    self.quit_game()
+                    
+                if self.state == GameState.MAIN_MENU:
+                    if event.key == pygame.K_n:
+                        self.current_stage = 1
+                        self.economy.current_gold = config.STARTING_GOLD
+                        self.roster.pieces.clear()
+                        self.shop.generate_shop()
+                        self.state = GameState.MANAGEMENT
+                    elif event.key == pygame.K_l:
+                        if os.path.exists(config.SAVE_FILE_PATH):
+                            self.current_stage = SaveManager.load_game(self.economy, self.roster)
+                            self.shop.generate_shop()
+                            self.state = GameState.MANAGEMENT
+                            print(f"Loaded game! Stage {self.current_stage}")
+                elif event.key == pygame.K_RETURN:
                     self.transition_state()
                 elif self.state == GameState.MANAGEMENT:
                     self.handle_management_input(event)
@@ -62,7 +87,7 @@ class GameEngine:
             if not self.economy.is_bankrupt:
                 self.state = GameState.DEPLOYMENT
                 print("Transitioned to DEPLOYMENT")
-                self.ai_generator.generate_formation()
+                self.ai_generator.generate_formation(self.current_stage)
             else:
                 print("Cannot deploy while bankrupt!")
         elif self.state == GameState.DEPLOYMENT:
@@ -70,6 +95,9 @@ class GameEngine:
             print("Transitioned to COMBAT")
             self.combat.start_combat()
         elif self.state == GameState.RESOLUTION:
+            if self.combat.outcome == "VICTORY":
+                self.current_stage += 1
+                
             # Process upkeep and hospital turns
             self.roster.tick_hospital_turns()
             self.economy.process_upkeep(self.roster)
@@ -82,6 +110,9 @@ class GameEngine:
                 self.state = GameState.GAME_OVER
             else:
                 self.state = GameState.MANAGEMENT
+                # Auto-save
+                SaveManager.save_game(self.economy, self.roster, self.current_stage)
+                self.shop.generate_shop()
                 
     def handle_management_input(self, event):
         if event.key == pygame.K_r:
@@ -121,7 +152,6 @@ class GameEngine:
     def update(self, dt: float):
         if self.state == GameState.COMBAT:
             if not self.combat.is_player_turn and not self.combat.outcome:
-                # Add tiny delay or visual delay here in future
                 pygame.time.delay(500)
                 self.combat.execute_ai_turn()
             
@@ -140,7 +170,9 @@ class GameEngine:
     def draw(self):
         self.screen.fill((30, 30, 30))
         
-        if self.state == GameState.MANAGEMENT:
+        if self.state == GameState.MAIN_MENU:
+            self.draw_main_menu_ui()
+        elif self.state == GameState.MANAGEMENT:
             self.draw_management_ui()
         elif self.state == GameState.DEPLOYMENT:
             self.draw_deployment_ui()
@@ -153,7 +185,24 @@ class GameEngine:
             
         pygame.display.flip()
         
+    def draw_main_menu_ui(self):
+        title = self.font.render("MoneyChess2", True, (255, 255, 255))
+        new_game = self.font.render("Press 'N' for New Game", True, (150, 255, 150))
+        
+        self.screen.blit(title, (config.WINDOW_WIDTH // 2 - 100, 200))
+        self.screen.blit(new_game, (config.WINDOW_WIDTH // 2 - 150, 300))
+        
+        if os.path.exists(config.SAVE_FILE_PATH):
+            load_game = self.font.render("Press 'L' to Load Game", True, (150, 150, 255))
+            self.screen.blit(load_game, (config.WINDOW_WIDTH // 2 - 150, 350))
+            
+        esc_quit = self.font.render("Press 'ESCAPE' to Quit", True, (255, 150, 150))
+        self.screen.blit(esc_quit, (config.WINDOW_WIDTH // 2 - 150, 450))
+        
     def draw_management_ui(self):
+        stage_surf = self.font.render(f"Stage {self.current_stage}", True, (200, 200, 255))
+        self.screen.blit(stage_surf, (config.WINDOW_WIDTH - 200, 20))
+        
         # Render gold and status
         color = (255, 100, 100) if self.economy.is_bankrupt else (255, 255, 100)
         gold_surface = self.font.render(f"Gold: {self.economy.current_gold}", True, color)
@@ -276,7 +325,7 @@ class GameEngine:
             cas_surf = self.font.render(cas_str, True, color)
             self.screen.blit(cas_surf, (20, 160 + i * 40))
             
-        enter_msg = self.font.render("Press ENTER to return to Management", True, (200, 255, 200))
+        enter_msg = self.font.render("Press ENTER to return to Management (Auto-Saves)", True, (200, 255, 200))
         self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
         
     def draw_game_over_ui(self):

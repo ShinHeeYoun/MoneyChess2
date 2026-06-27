@@ -1,11 +1,19 @@
 """
 MoneyChess2 Global Configuration
 """
+import os
 
 # Window settings
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS_LIMIT = 60
+
+# Persistence settings
+SAVE_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save_game.json")
+
+# Progression settings
+AI_STAGE_BUDGET_BASE = 100
+AI_STAGE_BUDGET_MULT = 50
 
 # Economy constants
 STARTING_GOLD = 500

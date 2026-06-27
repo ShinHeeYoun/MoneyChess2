@@ -7,6 +7,13 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 - **Dependency Installation:** `pip install pygame`
 - **Execution Command:** `python main.py`
 
+## Features
+- **Dynamic Economy:** Manage mercenaries through a randomized shop ecosystem with strict upkeep mechanics.
+- **Strategic Combat:** True chess movement logic with a dynamically generated AI adapting its budget to higher stages.
+- **Casualty & Attrition:** Simulated d100 probability matrix tracks injury/death outcomes for captured pieces.
+- **Persistent Progress:** JSON serialization enables secure Auto-Saving after every match instance.
+
+
 ## [2026-06-27] Module Update: Core Engine Initialization
 - Initialized project with Python/Pygame stack.\n- Implemented core configuration file (config.py) defining economy parameters, window settings, and dynamic hospital recovery ranges.\n- Created state management logic and game engine foundation.\n- Added robust git automation helper for continuous documentation updates.
 
@@ -18,4 +25,7 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## [2026-06-27] Module Update: Combat Engine and Casualty System
 - Implemented chess move validation spanning all standard piece vectors.\n- Built CombatEngine encapsulating turn sequence, AI priority-capture logic, and win-state evaluations.\n- Designed CaptureBuffer to securely track captured pieces during combat instances.\n- Integrated CasualtyProcessor d100 probability matrix executing upon RESOLUTION state transition.\n- Finalized global state loop connecting MANAGEMENT, DEPLOYMENT, COMBAT, RESOLUTION, and GAME OVER scenarios.
+
+## [2026-06-27] Module Update: Persistence and Progression Polish
+- Engineered JSON-based SaveManager enabling Auto-Save on match completion and Load Game functions from Main Menu.\n- Bound AIFormationGenerator to dynamic config scaling matrix linked to the current_stage counter.\n- Implemented graceful fallback quit sequences bridging Pygame OS triggers.\n- Finalized README.md with comprehensive feature definitions enforcing strict technical notation.
 
