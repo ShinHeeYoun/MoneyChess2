@@ -16,3 +16,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Module Update: Deployment Phase and AI Formations
 - Implemented BoardGrid defining 8x8 spatial boundaries and occupation logic.\n- Built DeploymentManager to capture drag-and-drop mouse events strictly bound to rows 6 and 7.\n- Added AIFormationGenerator that evaluates dynamic Vanguard, Defensive, and Standard matrices.\n- Upgraded state transitions in core engine to support DEPLOYMENT loop and grid rendering.
 
+## [2026-06-27] Module Update: Combat Engine and Casualty System
+- Implemented chess move validation spanning all standard piece vectors.\n- Built CombatEngine encapsulating turn sequence, AI priority-capture logic, and win-state evaluations.\n- Designed CaptureBuffer to securely track captured pieces during combat instances.\n- Integrated CasualtyProcessor d100 probability matrix executing upon RESOLUTION state transition.\n- Finalized global state loop connecting MANAGEMENT, DEPLOYMENT, COMBAT, RESOLUTION, and GAME OVER scenarios.
+

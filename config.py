@@ -12,6 +12,13 @@ STARTING_GOLD = 500
 SHOP_SIZE = 5
 SHOP_REROLL_COST = 10
 
+# Combat Rewards
+BASE_VICTORY_REWARD = 200
+DEFEAT_REWARD = 50
+
+# Victory Condition
+VICTORY_CONDITION = "ELIMINATE_KING"
+
 # Board Configurations
 GRID_SQUARE_SIZE = 80
 BOARD_OFFSET_X = (WINDOW_WIDTH - (8 * GRID_SQUARE_SIZE)) // 2
@@ -87,4 +94,13 @@ UNIT_DATA = {
         "recovery_max": 0,
         "shop_weight": 0
     }
+}
+
+CASUALTY_PROBABILITY_MATRIX = {
+    "Pawn": {"HEALTHY": 60, "INJURED": 30, "DEAD": 10},
+    "Knight": {"HEALTHY": 50, "INJURED": 40, "DEAD": 10},
+    "Bishop": {"HEALTHY": 50, "INJURED": 40, "DEAD": 10},
+    "Rook": {"HEALTHY": 40, "INJURED": 40, "DEAD": 20},
+    "Queen": {"HEALTHY": 30, "INJURED": 50, "DEAD": 20},
+    "King": {"HEALTHY": 100, "INJURED": 0, "DEAD": 0}
 }

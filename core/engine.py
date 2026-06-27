@@ -7,6 +7,8 @@ from economy.shop_generator import ShopManager
 from deployment.board_grid import BoardGrid
 from deployment.deployment_manager import DeploymentManager
 from deployment.ai_formations import AIFormationGenerator
+from combat.combat_engine import CombatEngine
+from casualty.hospital_system import CasualtyProcessor
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
@@ -26,7 +28,12 @@ class GameEngine:
         self.deployment_manager = DeploymentManager(self.board, self.roster)
         self.ai_generator = AIFormationGenerator(self.board)
         
+        self.combat = CombatEngine(self.board, self.deployment_manager, self.ai_generator)
+        self.hospital = CasualtyProcessor()
+        
         self.shop.generate_shop()
+        self.casualty_results = []
+        self.combat_reward = 0
         
     def handle_events(self, events):
         for event in events:
@@ -38,9 +45,13 @@ class GameEngine:
                 elif self.state == GameState.MANAGEMENT:
                     self.handle_management_input(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if self.state == GameState.DEPLOYMENT:
-                    if event.button == 1: # Left click
+                if event.button == 1: # Left click
+                    if self.state == GameState.DEPLOYMENT:
                         self.deployment_manager.handle_mouse_down(event.pos)
+                    elif self.state == GameState.COMBAT:
+                        grid_pos = self.board.screen_to_grid(*event.pos)
+                        if grid_pos:
+                            self.combat.handle_click(grid_pos[0], grid_pos[1])
             elif event.type == pygame.MOUSEBUTTONUP:
                 if self.state == GameState.DEPLOYMENT:
                     if event.button == 1:
@@ -57,7 +68,21 @@ class GameEngine:
         elif self.state == GameState.DEPLOYMENT:
             self.state = GameState.COMBAT
             print("Transitioned to COMBAT")
-                    
+            self.combat.start_combat()
+        elif self.state == GameState.RESOLUTION:
+            # Process upkeep and hospital turns
+            self.roster.tick_hospital_turns()
+            self.economy.process_upkeep(self.roster)
+            self.deployment_manager.clear_deployment()
+            
+            # Check Game Over
+            active_count = len(self.roster.get_active_units())
+            injured_count = len(self.roster.get_injured_units())
+            if self.economy.current_gold <= 0 and active_count == 0 and injured_count == 0:
+                self.state = GameState.GAME_OVER
+            else:
+                self.state = GameState.MANAGEMENT
+                
     def handle_management_input(self, event):
         if event.key == pygame.K_r:
             success = self.shop.reroll_shop()
@@ -94,9 +119,23 @@ class GameEngine:
             print(f"Failed to buy piece at slot {index + 1}.")
                 
     def update(self, dt: float):
-        if self.state == GameState.DEPLOYMENT:
-            # Use mouse position from pygame directly for drag visuals
-            pass
+        if self.state == GameState.COMBAT:
+            if not self.combat.is_player_turn and not self.combat.outcome:
+                # Add tiny delay or visual delay here in future
+                pygame.time.delay(500)
+                self.combat.execute_ai_turn()
+            
+            if self.combat.outcome:
+                # Combat finished, calculate rewards and process casualties
+                self.casualty_results = self.hospital.process_casualties(self.combat.capture_buffer.captured_player_units, self.roster)
+                if self.combat.outcome == "VICTORY":
+                    self.combat_reward = config.BASE_VICTORY_REWARD
+                else:
+                    self.combat_reward = config.DEFEAT_REWARD
+                self.economy.add_gold(self.combat_reward)
+                
+                self.state = GameState.RESOLUTION
+                print(f"Combat Ended. Outcome: {self.combat.outcome}")
         
     def draw(self):
         self.screen.fill((30, 30, 30))
@@ -105,6 +144,12 @@ class GameEngine:
             self.draw_management_ui()
         elif self.state == GameState.DEPLOYMENT:
             self.draw_deployment_ui()
+        elif self.state == GameState.COMBAT:
+            self.draw_combat_ui()
+        elif self.state == GameState.RESOLUTION:
+            self.draw_resolution_ui()
+        elif self.state == GameState.GAME_OVER:
+            self.draw_game_over_ui()
             
         pygame.display.flip()
         
@@ -128,18 +173,17 @@ class GameEngine:
             self.screen.blit(item_surf, (40, 160 + i * 40))
             
         # Render Roster
-        roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())})", True, (255, 255, 255))
+        roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, (255, 255, 255))
         self.screen.blit(roster_title, (400, 120))
         
-        for i, piece in enumerate(self.roster.get_active_units()[:10]): # Show up to 10
+        for i, piece in enumerate(self.roster.get_active_units()[:10]):
             piece_surf = self.font.render(f"{piece.piece_type.value} (Sell: {piece.sell_value}g)", True, (150, 150, 255))
             self.screen.blit(piece_surf, (420, 160 + i * 40))
             
         enter_msg = self.font.render("Press ENTER to proceed to Deployment", True, (200, 255, 200))
         self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
             
-    def draw_deployment_ui(self):
-        # Draw 8x8 Grid
+    def draw_board(self, show_zones=False):
         for row in range(8):
             for col in range(8):
                 x = config.BOARD_OFFSET_X + col * config.GRID_SQUARE_SIZE
@@ -148,20 +192,32 @@ class GameEngine:
                 # Checkered pattern
                 color = (200, 200, 200) if (row + col) % 2 == 0 else (100, 100, 100)
                 
-                # Highlight player deploy zone
-                if row in config.PLAYER_DEPLOY_ROWS:
-                    color = (color[0], color[1], color[2] + 50) if color[2] <= 205 else color
-                # Highlight AI deploy zone
-                elif row in config.AI_DEPLOY_ROWS:
-                    color = (color[0] + 50, color[1], color[2]) if color[0] <= 205 else color
-                    
+                if show_zones:
+                    # Highlight player deploy zone
+                    if row in config.PLAYER_DEPLOY_ROWS:
+                        color = (color[0], color[1], color[2] + 50) if color[2] <= 205 else color
+                    # Highlight AI deploy zone
+                    elif row in config.AI_DEPLOY_ROWS:
+                        color = (color[0] + 50, color[1], color[2]) if color[0] <= 205 else color
+                        
+                # Highlight selected piece and moves in COMBAT
+                if self.state == GameState.COMBAT:
+                    if self.combat.selected_pos == (row, col):
+                        color = (255, 255, 100)
+                    elif (row, col) in self.combat.valid_moves:
+                        color = (150, 255, 150)
+                        
                 pygame.draw.rect(self.screen, color, (x, y, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
                 
                 # Draw pieces on board
                 if self.board.is_occupied(row, col):
                     piece = self.board.grid[row][col]
-                    piece_surf = self.font.render(piece.piece_type.value[:2], True, (0, 0, 0))
+                    p_color = (0, 0, 255) if self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id)) else (255, 0, 0)
+                    piece_surf = self.font.render(piece.piece_type.value[:2], True, p_color)
                     self.screen.blit(piece_surf, (x + 20, y + 25))
+                    
+    def draw_deployment_ui(self):
+        self.draw_board(show_zones=True)
                     
         # Draw Sidebar (Unplaced Units)
         sidebar_title = self.font.render("Unplaced Units", True, (255, 255, 255))
@@ -182,9 +238,49 @@ class GameEngine:
         # Draw Dragging Piece
         if self.deployment_manager.dragging_piece:
             mx, my = pygame.mouse.get_pos()
-            # Simple text representation at mouse
             drag_label = self.font.render(self.deployment_manager.dragging_piece.piece_type.value, True, (255, 255, 0))
             self.screen.blit(drag_label, (mx - 20, my - 15))
             
         enter_msg = self.font.render("Press ENTER to proceed to Combat", True, (200, 255, 200))
         self.screen.blit(enter_msg, (config.BOARD_OFFSET_X, config.WINDOW_HEIGHT - 40))
+        
+    def draw_combat_ui(self):
+        self.draw_board(show_zones=False)
+        turn_text = "PLAYER TURN" if self.combat.is_player_turn else "AI TURN"
+        turn_color = (150, 255, 150) if self.combat.is_player_turn else (255, 150, 150)
+        turn_surf = self.font.render(turn_text, True, turn_color)
+        self.screen.blit(turn_surf, (20, 20))
+        
+    def draw_resolution_ui(self):
+        title = self.font.render(f"COMBAT RESOLUTION: {self.combat.outcome}", True, (255, 255, 255))
+        self.screen.blit(title, (20, 20))
+        
+        reward_txt = self.font.render(f"Gold Gained: {self.combat_reward}", True, (255, 255, 0))
+        self.screen.blit(reward_txt, (20, 60))
+        
+        cas_title = self.font.render("Casualty Report:", True, (200, 200, 200))
+        self.screen.blit(cas_title, (20, 120))
+        
+        for i, (piece, outcome) in enumerate(self.casualty_results):
+            if outcome == "HEALTHY":
+                color = (150, 255, 150)
+                info = "Returned safely"
+            elif outcome == "INJURED":
+                color = (255, 200, 100)
+                info = f"Unusable for {piece.current_injury_turns} turn(s)"
+            else:
+                color = (255, 100, 100)
+                info = "Removed from company"
+                
+            cas_str = f"{piece.piece_type.value} (ID: {str(piece.id)[:8]}...): {outcome} - {info}"
+            cas_surf = self.font.render(cas_str, True, color)
+            self.screen.blit(cas_surf, (20, 160 + i * 40))
+            
+        enter_msg = self.font.render("Press ENTER to return to Management", True, (200, 255, 200))
+        self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
+        
+    def draw_game_over_ui(self):
+        msg1 = self.font.render("GAME OVER", True, (255, 0, 0))
+        msg2 = self.font.render("Your company is bankrupt and has no remaining active or hospital units.", True, (200, 200, 200))
+        self.screen.blit(msg1, (config.WINDOW_WIDTH // 2 - 100, config.WINDOW_HEIGHT // 2 - 40))
+        self.screen.blit(msg2, (config.WINDOW_WIDTH // 2 - 400, config.WINDOW_HEIGHT // 2))
