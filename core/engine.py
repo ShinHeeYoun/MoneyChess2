@@ -18,8 +18,8 @@ from units.piece import PieceStatus
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
-        self.screen = screen
         self.window = screen
+        self.screen = pygame.Surface((config.WINDOW_WIDTH, config.WINDOW_HEIGHT))
         self.state = GameState.MAIN_MENU
         self.running = True
         self.clock = pygame.time.Clock()

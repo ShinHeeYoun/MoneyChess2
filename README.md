@@ -115,6 +115,14 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 - Corrected a critical runtime TypeError within `main.py` caused by a missing delta time parameter during frame loop execution.
 - Aligned `engine.draw(dt)` initialization with Phase 10 frame-rate independent pipeline adjustments.
 - Injected `dt: float = 1/60.0` default fallback parameters into `core/engine.py`'s method signature to gracefully resolve unparameterized legacy calls.
+
+## [2026-06-27] Patch 10.2: GameEngine Background Color Hotfix
+- Reverted invalid `config.BACKGROUND_COLOR` reference back to a native RGB tuple `(30, 30, 30)` within the `core/engine.py` draw method to resolve an `AttributeError` crash encountered post-Phase 10 deployment.
+
+## [2026-06-27] Patch 10.3: Rendering Pipeline Black Screen Hotfix
+- Diagnosed and resolved a critical visual regression resulting in a completely black screen rendering frame.
+- The defect was isolated to `core/engine.py`'s constructor where `self.screen` was erroneously aliased to `self.window`, causing the `self.window.fill((0, 0, 0))` call at the end of the draw pipeline to instantly wipe the primary rendering surface before blitting.
+- Corrected the architecture by rigidly instantiating `self.screen` as an isolated intermediate `pygame.Surface` buffer dimensioned to `(config.WINDOW_WIDTH, config.WINDOW_HEIGHT)`.
 ## [2026-06-27] Phase 9: Fog of War, Captive Defection, and Dual-Control UI
 - Upgraded economy balancing by zeroing out pawn upkeep overhead and shifting to dynamic material-value combat scaling.\n- Altered AIFormationGenerator sorting loops forcing Pawns to consume budget first for highly dense early row screenings.\n- Refactored Deployment grid swap mechanics resolving ghosting by executing absolute coordinate swaps instead of deletion parsing on occupied tiles.\n- Expanded the combat event listener architecture introducing Drag-to-Move input sequences natively overlapping legacy Click-to-Move protocols with rigid single-click focus retention.\n- Masked enemy grid blitting during DEPLOYMENT phases simulating Fog of War variables.\n- Developed a dynamic golden alpha-blended aura underlying all active Royal Guard evaluations directly inside the COMBAT drawing loop.\n- Engineered Captive Defection logic logging all captured enemy matrices and executing a rigid 10% d100 success check to instantiate them into the player roster.\n- Formulated absolute high-risk retreat protocols evaluating distance-to-deployment rows mapping down from 100% escape likelihood down to 65% on row 0; enforcing mandatory permadeath execution hooks overriding standard hospital logic loops.
 
@@ -126,4 +134,7 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## [2026-06-27] Patch 10.2: GameEngine Background Color Hotfix
 - Reverted invalid config.BACKGROUND_COLOR reference back to a native RGB tuple (30, 30, 30) within the core/engine.py draw method to resolve the AttributeError crash.
+
+## [2026-06-27] Patch 10.3: Rendering Pipeline Black Screen Hotfix
+- Resolved a critical visual regression resulting in a completely black screen rendering frame by instantiating self.screen as an isolated intermediate pygame.Surface buffer instead of an alias to self.window.
 
