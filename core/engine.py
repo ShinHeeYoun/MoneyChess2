@@ -224,7 +224,6 @@ class GameEngine:
             
         self.roster.tick_hospital_turns()
         self.economy.process_upkeep(self.roster)
-        self.deployment_manager.clear_deployment()
         
         active_count = len(self.roster.get_active_units())
         injured_count = len(self.roster.get_injured_units())
@@ -291,6 +290,7 @@ class GameEngine:
                     self.combat_reward = config.DEFEAT_REWARD
                 self.economy.add_gold(self.combat_reward)
                 
+                self.deployment_manager.clear_deployment()
                 self.state = GameState.RESOLUTION
                 self._build_ui_for_state()
         
@@ -424,6 +424,7 @@ class GameEngine:
         self.screen.blit(turn_surf, (20, 20))
         
     def draw_resolution_ui(self):
+        self.screen.fill((20, 20, 20))
         title = self.font.render(f"COMBAT RESOLUTION: {self.combat.outcome}", True, (255, 255, 255))
         self.screen.blit(title, (20, 20))
         

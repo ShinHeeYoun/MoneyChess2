@@ -36,3 +36,8 @@ class BoardGrid:
             self.grid[row][col] = None
             return piece
         return None
+        
+    def clear(self):
+        for r in range(8):
+            for c in range(8):
+                self.grid[r][c] = None

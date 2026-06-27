@@ -47,3 +47,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 6.8: Combat State Machine and Alpha Rendering Corrections
 - Rectified Match Termination Failure by pruning the Turn 0 Initialization Guard from check_victory_condition() which caused logic circumvention on list evaluation.\n- Fixed screen washout rendering regression by moving hover/alpha overlays to draw strictly after piece textures with proper pygame.SRCALPHA blending.\n- Fixed 'Double Action' state machine desync by replacing blocking pygame.time.delay(500) with a non-blocking frame timer (ai_turn_start_time), ensuring state changes draw cleanly without thread freezes.
 
+## [2026-06-27] Patch 6.9: Emergency Hotfix - Residual Final Piece Artifact on Match Termination
+- Enforced strict explicit 8x8 BoardGrid and DeploymentManager spatial wipeout immediately upon Combat state conclusion, completely severing all visual and logical positional bindings.\n- Relocated clear_deployment() method execution inside GameEngine up the logic chain to initialize precisely parallel with the RESOLUTION transition rather than return_to_camp, destroying all ghost caches.\n- Audited RESOLUTION draw buffer and overlaid a strict pygame.Surface block fill, removing final-turn combat artifact bleed-through.
+

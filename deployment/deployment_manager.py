@@ -58,10 +58,5 @@ class DeploymentManager:
             self.dragging_piece = None
             
     def clear_deployment(self):
-        for row in config.PLAYER_DEPLOY_ROWS:
-            for col in range(8):
-                if self.board.is_occupied(row, col):
-                    piece = self.board.grid[row][col]
-                    if self.roster.get_piece(piece.id):
-                        self.board.remove_piece(row, col)
+        self.board.clear()
         self.placed_pieces.clear()
