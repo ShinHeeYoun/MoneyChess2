@@ -114,9 +114,15 @@ class GameEngine:
                 self.buttons.append(UIButton(rect, f"Buy {piece_type.value} ({cost}g)", self.small_font, self.action_buy_piece, (i,)))
             
             active = self.roster.get_active_units()
-            for i, piece in enumerate(active[:10]):
-                rect = pygame.Rect(400, 150 + i * 40, 200, 30)
+            sellable_index = 0
+            for piece in active:
+                if piece.piece_type.value == "King":
+                    continue
+                if sellable_index >= 10:
+                    break
+                rect = pygame.Rect(400, 150 + sellable_index * 40, 200, 30)
                 self.buttons.append(UIButton(rect, f"Sell {piece.piece_type.value} (+{piece.sell_value}g)", self.small_font, self.action_sell_piece, (piece.id,)))
+                sellable_index += 1
                 
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Next Stage", self.font, self.action_next_stage))
             
@@ -196,8 +202,8 @@ class GameEngine:
     def action_select_contract(self, index):
         self.selected_contract = self.contract_previews[index]
         self.state = GameState.DEPLOYMENT
-        self.ai_generator.apply_formation(self.selected_contract["preview"])
         self.deployment_manager.auto_deploy()
+        self.ai_generator.apply_formation(self.selected_contract["preview"])
         self._build_ui_for_state()
         
     def action_start_combat(self):
@@ -214,6 +220,12 @@ class GameEngine:
         if not has_king:
             print("DEPLOYMENT WARNING: You must deploy your King on the active grid before commencing battle!")
             return
+            
+        # Fallback Check: Ensure AI pieces populate the board
+        if not self.ai_generator.ai_pieces:
+            print("FALLBACK: Regenerating AI Formation")
+            if self.selected_contract:
+                self.ai_generator.apply_formation(self.selected_contract["preview"])
             
         self.state = GameState.COMBAT
         self.combat.start_combat()

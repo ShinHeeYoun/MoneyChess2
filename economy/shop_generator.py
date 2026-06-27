@@ -55,7 +55,7 @@ class ShopManager:
     def sell_piece(self, piece_id: uuid.UUID) -> bool:
         piece = self.roster.get_piece(piece_id)
         if piece:
-            if piece.piece_type == PieceType.KING:
+            if piece.piece_type == PieceType.KING or str(piece.piece_type.value).upper() == "KING":
                 print("WARNING: You cannot sell the King!")
                 return False
                 
