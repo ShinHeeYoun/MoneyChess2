@@ -172,7 +172,7 @@ class GameEngine:
     def action_buy_pawn(self):
         from units.piece import PieceType, ChessPiece
         pawn_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
-        if self.economy.spend_gold(pawn_cost):
+        if not self.economy.is_bankrupt and self.economy.subtract_gold(pawn_cost):
             piece = ChessPiece(PieceType.PAWN)
             self.roster.add_piece(piece)
             self._build_ui_for_state()

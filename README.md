@@ -38,3 +38,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Patch 6.5: Combat Engine Hotfix, Authentic Sprites, and Infinite Pawn Shop
 - Resolved critical AttributeError in check_victory_condition() by mapping UUIDs to ChessPiece object arrays natively prior to logic evaluation.\n- Updated asset loader to dynamically load Cburnett-style chess sprite PNGs for standard rendering and completely removed legacy geometric rendering fallbacks.\n- Implemented dynamic missing asset logging module to stdout for transparent tracking.\n- Integrated an independent 'Recruit Pawn' button into the Management UI loop permitting unlimited baseline unit purchases directly outside the randomized shop loop.
 
+## [2026-06-27] Patch 6.6: Hotfix for Economy Method Signature Alignment
+- Rectified critical AttributeError occurring within action_buy_pawn button callback.\n- Aligned currency deduction interface to invoke self.economy.subtract_gold natively in adherence with Phase 2 EconomyManager standards.\n- Validated bankruptcy edge-cases for unlimited pawn generation against existing method parameters.
+
