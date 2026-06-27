@@ -9,10 +9,11 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## Features
 - **Dynamic Economy:** Manage mercenaries through a randomized shop ecosystem with strict upkeep mechanics.
-- **Graphical Interactivity:** Pure mouse-driven UI containing interactive buttons, drag-and-drop mechanics, and spatial hover highlights over custom geometric piece renderings.
+- **Graphical Interactivity:** Pure mouse-driven UI containing interactive buttons, drag-and-drop mechanics, and spatial hover highlights utilizing authentic Cburnett-style open-source chess sprites.
 - **Tactical Node Selection:** Players choose between three branching risk contracts (Low, Medium, High), scaling AI enemy density and reward yields for tactical autonomy.
 - **Strategic Combat:** True chess movement logic with a dynamically generated AI adapting its budget to higher stages.
 - **Casualty & Attrition:** Simulated d100 probability matrix tracks injury/death outcomes for captured pieces.
+- **Infinite Pawn Conscription:** Base infantry pawns bypass shop rotation variables and are infinitely purchasable from the Management screen.
 - **Persistent Progress:** JSON serialization enables secure Auto-Saving after every match instance.
 
 
@@ -33,4 +34,7 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## [2026-06-27] Module Update: Visual Interactivity and Tactical Stage Selection
 - Introduced UIButton UI module mapping strict collision boundaries and executing callback pipelines, stripping all debug keybindings from the engine.\n- Designed fallback sprite rendering pipeline overlaying custom geometric designs for every piece archetype utilizing standard Pygame drawing commands.\n- Integrated STAGE_SELECT state, deploying dynamic grid preview algorithms mapping risk scalars against base AI budgets to calculate variable node challenges.\n- Reconstructed game UI layer integrating visual context bounding box highlights natively rendering per frame update loops.
+
+## [2026-06-27] Patch 6.5: Combat Engine Hotfix, Authentic Sprites, and Infinite Pawn Shop
+- Resolved critical AttributeError in check_victory_condition() by mapping UUIDs to ChessPiece object arrays natively prior to logic evaluation.\n- Updated asset loader to dynamically load Cburnett-style chess sprite PNGs for standard rendering and completely removed legacy geometric rendering fallbacks.\n- Implemented dynamic missing asset logging module to stdout for transparent tracking.\n- Integrated an independent 'Recruit Pawn' button into the Management UI loop permitting unlimited baseline unit purchases directly outside the randomized shop loop.
 

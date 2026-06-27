@@ -57,31 +57,40 @@ class GameEngine:
             except:
                 pass
                 
+        expected_files = [
+            "w_pawn.png", "w_knight.png", "w_bishop.png", "w_rook.png", "w_queen.png", "w_king.png",
+            "b_pawn.png", "b_knight.png", "b_bishop.png", "b_rook.png", "b_queen.png", "b_king.png"
+        ]
+        
+        missing = []
+        for filename in expected_files:
+            path = os.path.join(config.ASSETS_DIR, filename)
+            if os.path.exists(path):
+                # We strip the extension to create the key
+                key = filename.split('.')[0]
+                img = pygame.image.load(path).convert_alpha()
+                # Scale it to fit the grid
+                img = pygame.transform.scale(img, (config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
+                self.assets[key] = img
+            else:
+                missing.append(filename)
+                
+        if missing:
+            print(f"WARNING: The following asset files are missing from {config.ASSETS_DIR}:")
+            for m in missing:
+                print(f"  - {m}")
+                
     def _draw_piece(self, piece_type: str, is_player: bool, rect: pygame.Rect):
-        key = f"{piece_type}_{'player' if is_player else 'ai'}"
+        # Translate PieceType to filename prefix
+        prefix = "w" if is_player else "b"
+        key = f"{prefix}_{piece_type.lower()}"
+        
         if key in self.assets:
             self.screen.blit(self.assets[key], rect)
         else:
-            color = (0, 100, 255) if is_player else (255, 50, 50)
-            center = rect.center
-            radius = config.GRID_SQUARE_SIZE // 3
-            if piece_type == "Pawn":
-                pygame.draw.circle(self.screen, color, center, radius)
-            elif piece_type == "Knight":
-                pygame.draw.polygon(self.screen, color, [(center[0], center[1]-radius), (center[0]-radius, center[1]+radius), (center[0]+radius, center[1]+radius)])
-            elif piece_type == "Rook":
-                pygame.draw.rect(self.screen, color, (center[0]-radius, center[1]-radius, radius*2, radius*2))
-            elif piece_type == "Bishop":
-                pygame.draw.polygon(self.screen, color, [(center[0], center[1]-radius), (center[0]-radius, center[1]), (center[0], center[1]+radius), (center[0]+radius, center[1])])
-            elif piece_type == "Queen":
-                pygame.draw.circle(self.screen, color, center, radius)
-                pygame.draw.circle(self.screen, (255, 215, 0), center, radius//2)
-            elif piece_type == "King":
-                pygame.draw.rect(self.screen, color, (center[0]-radius, center[1]-radius, radius*2, radius*2))
-                pygame.draw.rect(self.screen, (255, 215, 0), (center[0]-radius//2, center[1]-radius//2, radius, radius))
-            
-            letter = self.small_font.render(piece_type[:1], True, (255, 255, 255))
-            self.screen.blit(letter, letter.get_rect(center=center))
+            # Absolute fallback text if sprite is missing
+            letter = self.font.render(piece_type[:1], True, (255, 255, 255))
+            self.screen.blit(letter, letter.get_rect(center=rect.center))
 
     def _build_ui_for_state(self):
         self.buttons.clear()
@@ -93,6 +102,11 @@ class GameEngine:
                 
         elif self.state == GameState.MANAGEMENT:
             self.buttons.append(UIButton(pygame.Rect(20, 110, 200, 30), f"Reroll ({config.SHOP_REROLL_COST}g)", self.small_font, self.action_reroll))
+            
+            # Unlimited Pawn Button
+            pawn_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
+            self.buttons.append(UIButton(pygame.Rect(240, 110, 200, 30), f"Recruit Pawn ({pawn_cost}g)", self.small_font, self.action_buy_pawn))
+            
             for i, piece_type in enumerate(self.shop.current_shop):
                 cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
                 rect = pygame.Rect(20, 150 + i * 40, 200, 30)
@@ -153,6 +167,14 @@ class GameEngine:
             
     def action_buy_piece(self, index):
         if self.shop.buy_piece(index):
+            self._build_ui_for_state()
+            
+    def action_buy_pawn(self):
+        from units.piece import PieceType, ChessPiece
+        pawn_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
+        if self.economy.spend_gold(pawn_cost):
+            piece = ChessPiece(PieceType.PAWN)
+            self.roster.add_piece(piece)
             self._build_ui_for_state()
             
     def action_sell_piece(self, piece_id):

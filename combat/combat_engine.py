@@ -36,11 +36,8 @@ class CombatEngine:
         return piece in self.ai_gen.ai_pieces
         
     def get_player_pieces_list(self):
-        return [p for p in self.deployment_mgr.placed_pieces.keys()] # We just need id check really
-        # Actually in move_validation we passed the lists directly.
-        # Let's map properly.
         player_pieces = [self.deployment_mgr.roster.get_piece(pid) for pid in self.deployment_mgr.placed_pieces.keys()]
-        return player_pieces
+        return [p for p in player_pieces if p is not None]
         
     def get_ai_pieces_list(self):
         return self.ai_gen.ai_pieces
