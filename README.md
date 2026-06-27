@@ -9,6 +9,8 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## Features
 - **Dynamic Economy:** Manage mercenaries through a randomized shop ecosystem with strict upkeep mechanics.
+- **Graphical Interactivity:** Pure mouse-driven UI containing interactive buttons, drag-and-drop mechanics, and spatial hover highlights over custom geometric piece renderings.
+- **Tactical Node Selection:** Players choose between three branching risk contracts (Low, Medium, High), scaling AI enemy density and reward yields for tactical autonomy.
 - **Strategic Combat:** True chess movement logic with a dynamically generated AI adapting its budget to higher stages.
 - **Casualty & Attrition:** Simulated d100 probability matrix tracks injury/death outcomes for captured pieces.
 - **Persistent Progress:** JSON serialization enables secure Auto-Saving after every match instance.
@@ -28,4 +30,7 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 
 ## [2026-06-27] Module Update: Persistence and Progression Polish
 - Engineered JSON-based SaveManager enabling Auto-Save on match completion and Load Game functions from Main Menu.\n- Bound AIFormationGenerator to dynamic config scaling matrix linked to the current_stage counter.\n- Implemented graceful fallback quit sequences bridging Pygame OS triggers.\n- Finalized README.md with comprehensive feature definitions enforcing strict technical notation.
+
+## [2026-06-27] Module Update: Visual Interactivity and Tactical Stage Selection
+- Introduced UIButton UI module mapping strict collision boundaries and executing callback pipelines, stripping all debug keybindings from the engine.\n- Designed fallback sprite rendering pipeline overlaying custom geometric designs for every piece archetype utilizing standard Pygame drawing commands.\n- Integrated STAGE_SELECT state, deploying dynamic grid preview algorithms mapping risk scalars against base AI budgets to calculate variable node challenges.\n- Reconstructed game UI layer integrating visual context bounding box highlights natively rendering per frame update loops.
 

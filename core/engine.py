@@ -12,6 +12,7 @@ from deployment.ai_formations import AIFormationGenerator
 from combat.combat_engine import CombatEngine
 from casualty.hospital_system import CasualtyProcessor
 from persistence.save_manager import SaveManager
+from ui.button import UIButton
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
@@ -21,10 +22,10 @@ class GameEngine:
         
         pygame.font.init()
         self.font = pygame.font.SysFont(None, 36)
+        self.small_font = pygame.font.SysFont(None, 24)
         
         self.current_stage = 1
         
-        # Initialize modules
         self.roster = RosterManager()
         self.economy = EconomyManager()
         self.shop = ShopManager(self.economy, self.roster)
@@ -39,6 +40,160 @@ class GameEngine:
         self.casualty_results = []
         self.combat_reward = 0
         
+        self.buttons = []
+        self.contract_previews = []
+        self.selected_contract = None
+        
+        self.assets = {}
+        self._load_assets()
+        
+        self.shop.generate_shop()
+        self._build_ui_for_state()
+        
+    def _load_assets(self):
+        if not os.path.exists(config.ASSETS_DIR):
+            try:
+                os.makedirs(config.ASSETS_DIR)
+            except:
+                pass
+                
+    def _draw_piece(self, piece_type: str, is_player: bool, rect: pygame.Rect):
+        key = f"{piece_type}_{'player' if is_player else 'ai'}"
+        if key in self.assets:
+            self.screen.blit(self.assets[key], rect)
+        else:
+            color = (0, 100, 255) if is_player else (255, 50, 50)
+            center = rect.center
+            radius = config.GRID_SQUARE_SIZE // 3
+            if piece_type == "Pawn":
+                pygame.draw.circle(self.screen, color, center, radius)
+            elif piece_type == "Knight":
+                pygame.draw.polygon(self.screen, color, [(center[0], center[1]-radius), (center[0]-radius, center[1]+radius), (center[0]+radius, center[1]+radius)])
+            elif piece_type == "Rook":
+                pygame.draw.rect(self.screen, color, (center[0]-radius, center[1]-radius, radius*2, radius*2))
+            elif piece_type == "Bishop":
+                pygame.draw.polygon(self.screen, color, [(center[0], center[1]-radius), (center[0]-radius, center[1]), (center[0], center[1]+radius), (center[0]+radius, center[1])])
+            elif piece_type == "Queen":
+                pygame.draw.circle(self.screen, color, center, radius)
+                pygame.draw.circle(self.screen, (255, 215, 0), center, radius//2)
+            elif piece_type == "King":
+                pygame.draw.rect(self.screen, color, (center[0]-radius, center[1]-radius, radius*2, radius*2))
+                pygame.draw.rect(self.screen, (255, 215, 0), (center[0]-radius//2, center[1]-radius//2, radius, radius))
+            
+            letter = self.small_font.render(piece_type[:1], True, (255, 255, 255))
+            self.screen.blit(letter, letter.get_rect(center=center))
+
+    def _build_ui_for_state(self):
+        self.buttons.clear()
+        
+        if self.state == GameState.MAIN_MENU:
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 100, 300, 200, 50), "New Game", self.font, self.action_new_game))
+            if os.path.exists(config.SAVE_FILE_PATH):
+                self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 100, 370, 200, 50), "Load Game", self.font, self.action_load_game))
+                
+        elif self.state == GameState.MANAGEMENT:
+            self.buttons.append(UIButton(pygame.Rect(20, 110, 200, 30), f"Reroll ({config.SHOP_REROLL_COST}g)", self.small_font, self.action_reroll))
+            for i, piece_type in enumerate(self.shop.current_shop):
+                cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
+                rect = pygame.Rect(20, 150 + i * 40, 200, 30)
+                self.buttons.append(UIButton(rect, f"Buy {piece_type.value} ({cost}g)", self.small_font, self.action_buy_piece, (i,)))
+            
+            active = self.roster.get_active_units()
+            for i, piece in enumerate(active[:10]):
+                rect = pygame.Rect(400, 150 + i * 40, 200, 30)
+                self.buttons.append(UIButton(rect, f"Sell {piece.piece_type.value} (+{piece.sell_value}g)", self.small_font, self.action_sell_piece, (piece.id,)))
+                
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Next Stage", self.font, self.action_next_stage))
+            
+        elif self.state == GameState.STAGE_SELECT:
+            self.contract_previews = []
+            keys = list(config.CONTRACTS.keys())
+            for i, c_key in enumerate(keys):
+                contract = config.CONTRACTS[c_key]
+                preview = self.ai_generator.generate_formation_preview(self.current_stage, contract["budget_mult"])
+                reward = int(config.BASE_VICTORY_REWARD * contract["reward_mult"])
+                self.contract_previews.append({"key": c_key, "preview": preview, "reward": reward})
+                
+                # Format text summary
+                summary = []
+                for pt, count in preview["counts"].items():
+                    summary.append(f"{count} {pt}s")
+                summary_str = "\n".join(summary)
+                if not summary_str:
+                    summary_str = "None"
+                    
+                text = f"{contract['name']}\n\nExpected Forces:\n{summary_str}\n\nReward: {reward}g\n\nClick to Select"
+                rect = pygame.Rect(150 + i * 350, 150, 300, 400)
+                btn = UIButton(rect, text, self.small_font, self.action_select_contract, (i,))
+                self.buttons.append(btn)
+                
+        elif self.state == GameState.DEPLOYMENT:
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 250, config.WINDOW_HEIGHT - 80, 200, 50), "Battle Start", self.font, self.action_start_combat))
+            
+        elif self.state == GameState.RESOLUTION:
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Return to Camp", self.font, self.action_return_to_camp))
+
+    def action_new_game(self):
+        self.current_stage = 1
+        self.economy.current_gold = config.STARTING_GOLD
+        self.roster.pieces.clear()
+        self.shop.generate_shop()
+        self.state = GameState.MANAGEMENT
+        self._build_ui_for_state()
+        
+    def action_load_game(self):
+        self.current_stage = SaveManager.load_game(self.economy, self.roster)
+        self.shop.generate_shop()
+        self.state = GameState.MANAGEMENT
+        self._build_ui_for_state()
+        
+    def action_reroll(self):
+        if self.shop.reroll_shop():
+            self._build_ui_for_state()
+            
+    def action_buy_piece(self, index):
+        if self.shop.buy_piece(index):
+            self._build_ui_for_state()
+            
+    def action_sell_piece(self, piece_id):
+        if self.shop.sell_piece(piece_id):
+            self._build_ui_for_state()
+            
+    def action_next_stage(self):
+        if not self.economy.is_bankrupt:
+            self.state = GameState.STAGE_SELECT
+            self._build_ui_for_state()
+            
+    def action_select_contract(self, index):
+        self.selected_contract = self.contract_previews[index]
+        self.state = GameState.DEPLOYMENT
+        self.ai_generator.apply_formation(self.selected_contract["preview"])
+        self._build_ui_for_state()
+        
+    def action_start_combat(self):
+        self.state = GameState.COMBAT
+        self.combat.start_combat()
+        self._build_ui_for_state()
+        
+    def action_return_to_camp(self):
+        if self.combat.outcome == "VICTORY":
+            self.current_stage += 1
+            
+        self.roster.tick_hospital_turns()
+        self.economy.process_upkeep(self.roster)
+        self.deployment_manager.clear_deployment()
+        
+        active_count = len(self.roster.get_active_units())
+        injured_count = len(self.roster.get_injured_units())
+        if self.economy.current_gold <= 0 and active_count == 0 and injured_count == 0:
+            self.state = GameState.GAME_OVER
+        else:
+            self.state = GameState.MANAGEMENT
+            SaveManager.save_game(self.economy, self.roster, self.current_stage)
+            self.shop.generate_shop()
+            
+        self._build_ui_for_state()
+
     def quit_game(self):
         self.running = False
         pygame.quit()
@@ -52,103 +207,28 @@ class GameEngine:
                 if event.key == pygame.K_ESCAPE:
                     self.quit_game()
                     
-                if self.state == GameState.MAIN_MENU:
-                    if event.key == pygame.K_n:
-                        self.current_stage = 1
-                        self.economy.current_gold = config.STARTING_GOLD
-                        self.roster.pieces.clear()
-                        self.shop.generate_shop()
-                        self.state = GameState.MANAGEMENT
-                    elif event.key == pygame.K_l:
-                        if os.path.exists(config.SAVE_FILE_PATH):
-                            self.current_stage = SaveManager.load_game(self.economy, self.roster)
-                            self.shop.generate_shop()
-                            self.state = GameState.MANAGEMENT
-                            print(f"Loaded game! Stage {self.current_stage}")
-                elif event.key == pygame.K_RETURN:
-                    self.transition_state()
-                elif self.state == GameState.MANAGEMENT:
-                    self.handle_management_input(event)
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: # Left click
-                    if self.state == GameState.DEPLOYMENT:
-                        self.deployment_manager.handle_mouse_down(event.pos)
-                    elif self.state == GameState.COMBAT:
-                        grid_pos = self.board.screen_to_grid(*event.pos)
-                        if grid_pos:
-                            self.combat.handle_click(grid_pos[0], grid_pos[1])
-            elif event.type == pygame.MOUSEBUTTONUP:
+            # Handle UI buttons globally
+            handled = False
+            for btn in self.buttons:
+                if btn.handle_event(event):
+                    handled = True
+                    break
+                    
+            if handled:
+                continue
+                
+            # State specific mouse events
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.state == GameState.DEPLOYMENT:
-                    if event.button == 1:
-                        self.deployment_manager.handle_mouse_up(event.pos)
-                        
-    def transition_state(self):
-        if self.state == GameState.MANAGEMENT:
-            if not self.economy.is_bankrupt:
-                self.state = GameState.DEPLOYMENT
-                print("Transitioned to DEPLOYMENT")
-                self.ai_generator.generate_formation(self.current_stage)
-            else:
-                print("Cannot deploy while bankrupt!")
-        elif self.state == GameState.DEPLOYMENT:
-            self.state = GameState.COMBAT
-            print("Transitioned to COMBAT")
-            self.combat.start_combat()
-        elif self.state == GameState.RESOLUTION:
-            if self.combat.outcome == "VICTORY":
-                self.current_stage += 1
-                
-            # Process upkeep and hospital turns
-            self.roster.tick_hospital_turns()
-            self.economy.process_upkeep(self.roster)
-            self.deployment_manager.clear_deployment()
-            
-            # Check Game Over
-            active_count = len(self.roster.get_active_units())
-            injured_count = len(self.roster.get_injured_units())
-            if self.economy.current_gold <= 0 and active_count == 0 and injured_count == 0:
-                self.state = GameState.GAME_OVER
-            else:
-                self.state = GameState.MANAGEMENT
-                # Auto-save
-                SaveManager.save_game(self.economy, self.roster, self.current_stage)
-                self.shop.generate_shop()
-                
-    def handle_management_input(self, event):
-        if event.key == pygame.K_r:
-            success = self.shop.reroll_shop()
-            if success:
-                print("Shop rerolled!")
-            else:
-                print("Failed to reroll. Bankrupt or insufficient gold.")
-        elif event.key == pygame.K_1:
-            self._try_buy(0)
-        elif event.key == pygame.K_2:
-            self._try_buy(1)
-        elif event.key == pygame.K_3:
-            self._try_buy(2)
-        elif event.key == pygame.K_4:
-            self._try_buy(3)
-        elif event.key == pygame.K_5:
-            self._try_buy(4)
-        elif event.key == pygame.K_s:
-            # Sell the first active piece for testing
-            active = self.roster.get_active_units()
-            if active:
-                self.shop.sell_piece(active[0].id)
-                print(f"Sold piece: {active[0].piece_type.value}")
-        elif event.key == pygame.K_u:
-            # Process upkeep manually for testing
-            self.economy.process_upkeep(self.roster)
-            print("Upkeep processed.")
+                    self.deployment_manager.handle_mouse_down(event.pos)
+                elif self.state == GameState.COMBAT:
+                    grid_pos = self.board.screen_to_grid(*event.pos)
+                    if grid_pos:
+                        self.combat.handle_click(grid_pos[0], grid_pos[1])
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.state == GameState.DEPLOYMENT:
+                    self.deployment_manager.handle_mouse_up(event.pos)
 
-    def _try_buy(self, index):
-        success = self.shop.buy_piece(index)
-        if success:
-            print(f"Bought piece at slot {index + 1}!")
-        else:
-            print(f"Failed to buy piece at slot {index + 1}.")
-                
     def update(self, dt: float):
         if self.state == GameState.COMBAT:
             if not self.combat.is_player_turn and not self.combat.outcome:
@@ -156,16 +236,17 @@ class GameEngine:
                 self.combat.execute_ai_turn()
             
             if self.combat.outcome:
-                # Combat finished, calculate rewards and process casualties
                 self.casualty_results = self.hospital.process_casualties(self.combat.capture_buffer.captured_player_units, self.roster)
                 if self.combat.outcome == "VICTORY":
-                    self.combat_reward = config.BASE_VICTORY_REWARD
+                    # Use contract multiplier
+                    base_reward = self.selected_contract["reward"] if self.selected_contract else config.BASE_VICTORY_REWARD
+                    self.combat_reward = base_reward
                 else:
                     self.combat_reward = config.DEFEAT_REWARD
                 self.economy.add_gold(self.combat_reward)
                 
                 self.state = GameState.RESOLUTION
-                print(f"Combat Ended. Outcome: {self.combat.outcome}")
+                self._build_ui_for_state()
         
     def draw(self):
         self.screen.fill((30, 30, 30))
@@ -174,6 +255,8 @@ class GameEngine:
             self.draw_main_menu_ui()
         elif self.state == GameState.MANAGEMENT:
             self.draw_management_ui()
+        elif self.state == GameState.STAGE_SELECT:
+            self.draw_stage_select_ui()
         elif self.state == GameState.DEPLOYMENT:
             self.draw_deployment_ui()
         elif self.state == GameState.COMBAT:
@@ -183,27 +266,23 @@ class GameEngine:
         elif self.state == GameState.GAME_OVER:
             self.draw_game_over_ui()
             
+        # Draw buttons
+        for btn in self.buttons:
+            btn.draw(self.screen)
+            
         pygame.display.flip()
         
     def draw_main_menu_ui(self):
         title = self.font.render("MoneyChess2", True, (255, 255, 255))
-        new_game = self.font.render("Press 'N' for New Game", True, (150, 255, 150))
-        
         self.screen.blit(title, (config.WINDOW_WIDTH // 2 - 100, 200))
-        self.screen.blit(new_game, (config.WINDOW_WIDTH // 2 - 150, 300))
         
-        if os.path.exists(config.SAVE_FILE_PATH):
-            load_game = self.font.render("Press 'L' to Load Game", True, (150, 150, 255))
-            self.screen.blit(load_game, (config.WINDOW_WIDTH // 2 - 150, 350))
-            
-        esc_quit = self.font.render("Press 'ESCAPE' to Quit", True, (255, 150, 150))
-        self.screen.blit(esc_quit, (config.WINDOW_WIDTH // 2 - 150, 450))
+        esc_quit = self.small_font.render("Press 'ESCAPE' to Quit", True, (255, 150, 150))
+        self.screen.blit(esc_quit, (config.WINDOW_WIDTH // 2 - 100, 500))
         
     def draw_management_ui(self):
         stage_surf = self.font.render(f"Stage {self.current_stage}", True, (200, 200, 255))
         self.screen.blit(stage_surf, (config.WINDOW_WIDTH - 200, 20))
         
-        # Render gold and status
         color = (255, 100, 100) if self.economy.is_bankrupt else (255, 255, 100)
         gold_surface = self.font.render(f"Gold: {self.economy.current_gold}", True, color)
         self.screen.blit(gold_surface, (20, 20))
@@ -212,63 +291,68 @@ class GameEngine:
         upkeep_surface = self.font.render(f"Upkeep: {upkeep}", True, (200, 200, 200))
         self.screen.blit(upkeep_surface, (20, 60))
         
-        # Render shop
-        shop_title = self.font.render("Shop (Press 1-5 to buy, R to reroll, S to sell first unit, U to process upkeep)", True, (255, 255, 255))
+        shop_title = self.font.render("Shop", True, (255, 255, 255))
         self.screen.blit(shop_title, (20, 120))
-        
-        for i, piece_type in enumerate(self.shop.current_shop):
-            cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
-            item_surf = self.font.render(f"{i+1}: {piece_type.value} ({cost}g)", True, (150, 255, 150))
-            self.screen.blit(item_surf, (40, 160 + i * 40))
             
-        # Render Roster
         roster_title = self.font.render(f"Roster (Active: {len(self.roster.get_active_units())}, Injured: {len(self.roster.get_injured_units())})", True, (255, 255, 255))
         self.screen.blit(roster_title, (400, 120))
         
-        for i, piece in enumerate(self.roster.get_active_units()[:10]):
-            piece_surf = self.font.render(f"{piece.piece_type.value} (Sell: {piece.sell_value}g)", True, (150, 150, 255))
-            self.screen.blit(piece_surf, (420, 160 + i * 40))
-            
-        enter_msg = self.font.render("Press ENTER to proceed to Deployment", True, (200, 255, 200))
-        self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
+    def draw_stage_select_ui(self):
+        title = self.font.render("Select Tactical Contract", True, (255, 255, 255))
+        self.screen.blit(title, (config.WINDOW_WIDTH // 2 - 150, 50))
             
     def draw_board(self, show_zones=False):
+        mx, my = pygame.mouse.get_pos()
+        hover_grid = self.board.screen_to_grid(mx, my)
+        
         for row in range(8):
             for col in range(8):
                 x = config.BOARD_OFFSET_X + col * config.GRID_SQUARE_SIZE
                 y = config.BOARD_OFFSET_Y + row * config.GRID_SQUARE_SIZE
                 
-                # Checkered pattern
                 color = (200, 200, 200) if (row + col) % 2 == 0 else (100, 100, 100)
                 
                 if show_zones:
-                    # Highlight player deploy zone
                     if row in config.PLAYER_DEPLOY_ROWS:
                         color = (color[0], color[1], color[2] + 50) if color[2] <= 205 else color
-                    # Highlight AI deploy zone
                     elif row in config.AI_DEPLOY_ROWS:
                         color = (color[0] + 50, color[1], color[2]) if color[0] <= 205 else color
                         
-                # Highlight selected piece and moves in COMBAT
                 if self.state == GameState.COMBAT:
                     if self.combat.selected_pos == (row, col):
                         color = (255, 255, 100)
                     elif (row, col) in self.combat.valid_moves:
                         color = (150, 255, 150)
                         
-                pygame.draw.rect(self.screen, color, (x, y, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
+                rect = pygame.Rect(x, y, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
+                pygame.draw.rect(self.screen, color, rect)
                 
-                # Draw pieces on board
+                # Hover Highlight
+                if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT]):
+                    # Check if hovered tile is valid contextually
+                    is_valid_hover = False
+                    if self.state == GameState.DEPLOYMENT and row in config.PLAYER_DEPLOY_ROWS and not self.board.is_occupied(row, col) and self.deployment_manager.dragging_piece:
+                        is_valid_hover = True
+                    elif self.state == GameState.COMBAT:
+                        if self.combat.selected_pos and (row, col) in self.combat.valid_moves:
+                            is_valid_hover = True
+                        elif not self.combat.selected_pos and self.board.is_occupied(row, col) and self.combat.is_player_piece(self.board.grid[row][col]):
+                            is_valid_hover = True
+                            
+                    if is_valid_hover:
+                        overlay = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE))
+                        overlay.set_alpha(100)
+                        overlay.fill((255, 255, 0))
+                        self.screen.blit(overlay, rect)
+                
                 if self.board.is_occupied(row, col):
                     piece = self.board.grid[row][col]
-                    p_color = (0, 0, 255) if self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id)) else (255, 0, 0)
-                    piece_surf = self.font.render(piece.piece_type.value[:2], True, p_color)
-                    self.screen.blit(piece_surf, (x + 20, y + 25))
+                    is_player = self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id))
+                    self._draw_piece(piece.piece_type.value, is_player, rect)
                     
     def draw_deployment_ui(self):
         self.draw_board(show_zones=True)
                     
-        # Draw Sidebar (Unplaced Units)
         sidebar_title = self.font.render("Unplaced Units", True, (255, 255, 255))
         self.screen.blit(sidebar_title, (20, 150))
         
@@ -276,22 +360,17 @@ class GameEngine:
         sidebar_y_start = 200
         unplaced = self.deployment_manager.get_unplaced_active_units()
         for i, piece in enumerate(unplaced):
-            # Skip drawing the one we are dragging
             if self.deployment_manager.dragging_piece and self.deployment_manager.dragging_piece.id == piece.id:
                 continue
             rect = pygame.Rect(sidebar_x, sidebar_y_start + i * 40, 150, 30)
             pygame.draw.rect(self.screen, (100, 150, 200), rect)
-            label = self.font.render(piece.piece_type.value, True, (0, 0, 0))
+            label = self.small_font.render(piece.piece_type.value, True, (0, 0, 0))
             self.screen.blit(label, (sidebar_x + 5, sidebar_y_start + i * 40 + 5))
             
-        # Draw Dragging Piece
         if self.deployment_manager.dragging_piece:
             mx, my = pygame.mouse.get_pos()
-            drag_label = self.font.render(self.deployment_manager.dragging_piece.piece_type.value, True, (255, 255, 0))
-            self.screen.blit(drag_label, (mx - 20, my - 15))
-            
-        enter_msg = self.font.render("Press ENTER to proceed to Combat", True, (200, 255, 200))
-        self.screen.blit(enter_msg, (config.BOARD_OFFSET_X, config.WINDOW_HEIGHT - 40))
+            rect = pygame.Rect(mx - config.GRID_SQUARE_SIZE//2, my - config.GRID_SQUARE_SIZE//2, config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE)
+            self._draw_piece(self.deployment_manager.dragging_piece.piece_type.value, True, rect)
         
     def draw_combat_ui(self):
         self.draw_board(show_zones=False)
@@ -324,9 +403,6 @@ class GameEngine:
             cas_str = f"{piece.piece_type.value} (ID: {str(piece.id)[:8]}...): {outcome} - {info}"
             cas_surf = self.font.render(cas_str, True, color)
             self.screen.blit(cas_surf, (20, 160 + i * 40))
-            
-        enter_msg = self.font.render("Press ENTER to return to Management (Auto-Saves)", True, (200, 255, 200))
-        self.screen.blit(enter_msg, (20, config.WINDOW_HEIGHT - 50))
         
     def draw_game_over_ui(self):
         msg1 = self.font.render("GAME OVER", True, (255, 0, 0))

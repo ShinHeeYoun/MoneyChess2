@@ -8,12 +8,27 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 FPS_LIMIT = 60
 
+# Asset Directory
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "pieces")
+
 # Persistence settings
 SAVE_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save_game.json")
+
+# Button UI configurations
+BUTTON_COLOR_NEUTRAL = (70, 70, 70)
+BUTTON_COLOR_HOVER = (100, 100, 100)
+BUTTON_TEXT_COLOR = (255, 255, 255)
 
 # Progression settings
 AI_STAGE_BUDGET_BASE = 100
 AI_STAGE_BUDGET_MULT = 50
+
+# Contract Selection parameters
+CONTRACTS = {
+    "Low": {"budget_mult": 0.8, "reward_mult": 0.8, "name": "Low Risk"},
+    "Medium": {"budget_mult": 1.0, "reward_mult": 1.0, "name": "Medium Risk"},
+    "High": {"budget_mult": 1.5, "reward_mult": 1.5, "name": "High Risk"}
+}
 
 # Economy constants
 STARTING_GOLD = 500
