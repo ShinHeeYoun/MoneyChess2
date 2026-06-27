@@ -8,38 +8,58 @@ WINDOW_HEIGHT = 720
 FPS_LIMIT = 60
 
 # Economy constants
-STARTING_GOLD = 100
-SHOP_REROLL_COST = 5
-BANKRUPTCY_THRESHOLD = 0
-BANKRUPTCY_PENALTY_MORALE = 10 
+STARTING_GOLD = 500
+SHOP_SIZE = 5
+SHOP_REROLL_COST = 10
 
-# Unit Economy
-UNIT_BASE_COST = {
-    "Pawn": 10,
-    "Knight": 30,
-    "Bishop": 30,
-    "Rook": 50,
-    "Queen": 90,
-    "King": 0
-}
-
-UNIT_UPKEEP = {
-    "Pawn": 1,
-    "Knight": 3,
-    "Bishop": 3,
-    "Rook": 5,
-    "Queen": 10,
-    "King": 0
-}
-
-UNIT_SELL_MARGIN = 0.5 
-
-# Hospital Recovery Parameters
-HOSPITAL_RECOVERY_TURNS = {
-    "Pawn": {"min": 1, "max": 1},
-    "Knight": {"min": 1, "max": 2},
-    "Bishop": {"min": 1, "max": 2},
-    "Rook": {"min": 2, "max": 3},
-    "Queen": {"min": 3, "max": 4},
-    "King": {"min": 0, "max": 0}
+# Unit Economy & Properties
+UNIT_DATA = {
+    "Pawn": {
+        "buy_cost": 50,
+        "sell_value": 25,
+        "upkeep": 2,
+        "recovery_min": 1,
+        "recovery_max": 1,
+        "shop_weight": 50
+    },
+    "Knight": {
+        "buy_cost": 150,
+        "sell_value": 75,
+        "upkeep": 6,
+        "recovery_min": 1,
+        "recovery_max": 2,
+        "shop_weight": 20
+    },
+    "Bishop": {
+        "buy_cost": 150,
+        "sell_value": 75,
+        "upkeep": 6,
+        "recovery_min": 1,
+        "recovery_max": 2,
+        "shop_weight": 20
+    },
+    "Rook": {
+        "buy_cost": 250,
+        "sell_value": 125,
+        "upkeep": 10,
+        "recovery_min": 2,
+        "recovery_max": 3,
+        "shop_weight": 10
+    },
+    "Queen": {
+        "buy_cost": 500,
+        "sell_value": 250,
+        "upkeep": 20,
+        "recovery_min": 3,
+        "recovery_max": 4,
+        "shop_weight": 2
+    },
+    "King": {
+        "buy_cost": 0,
+        "sell_value": 0,
+        "upkeep": 0,
+        "recovery_min": 0,
+        "recovery_max": 0,
+        "shop_weight": 0
+    }
 }
