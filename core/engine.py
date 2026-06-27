@@ -38,6 +38,7 @@ class GameEngine:
         self.hospital = CasualtyProcessor()
         
         self.casualty_results = []
+        self.recruited_captives = []
         self.combat_reward = 0
         self.ai_turn_start_time = 0
         
@@ -151,6 +152,9 @@ class GameEngine:
         elif self.state == GameState.DEPLOYMENT:
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 250, config.WINDOW_HEIGHT - 80, 200, 50), "Battle Start", self.font, self.action_start_combat))
             
+        elif self.state == GameState.COMBAT:
+            self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Retreat", self.font, self.action_retreat))
+            
         elif self.state == GameState.RESOLUTION:
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 150, config.WINDOW_HEIGHT - 100, 300, 50), "Confirm & Proceed", self.font, self.action_return_to_camp))
 
@@ -231,6 +235,10 @@ class GameEngine:
         self.combat.start_combat()
         self._build_ui_for_state()
         
+    def action_retreat(self):
+        if self.combat.outcome is None:
+            self.combat.execute_retreat()
+            
     def action_return_to_camp(self):
         if self.combat.outcome == "VICTORY":
             self.current_stage += 1
@@ -279,10 +287,14 @@ class GameEngine:
                 elif self.state == GameState.COMBAT:
                     grid_pos = self.board.screen_to_grid(*event.pos)
                     if grid_pos:
-                        self.combat.handle_click(grid_pos[0], grid_pos[1])
+                        self.combat.handle_mouse_down(grid_pos[0], grid_pos[1])
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.state == GameState.DEPLOYMENT:
                     self.deployment_manager.handle_mouse_up(event.pos)
+                elif self.state == GameState.COMBAT:
+                    grid_pos = self.board.screen_to_grid(*event.pos)
+                    if grid_pos:
+                        self.combat.handle_mouse_up(grid_pos[0], grid_pos[1])
 
     def update(self, dt: float):
         if self.state == GameState.COMBAT:
@@ -295,12 +307,15 @@ class GameEngine:
             
             if self.combat.outcome:
                 self.casualty_results = self.hospital.process_casualties(self.combat.capture_buffer.captured_player_units, self.roster)
+                self.recruited_captives = self.hospital.process_enemy_captives(self.combat.capture_buffer.captured_ai_units, self.roster)
+                
+                base_reward = self.selected_contract["reward"] if self.selected_contract else config.BASE_VICTORY_REWARD
                 if self.combat.outcome == "VICTORY":
-                    # Use contract multiplier
-                    base_reward = self.selected_contract["reward"] if self.selected_contract else config.BASE_VICTORY_REWARD
-                    self.combat_reward = base_reward
+                    material_bonus = sum(config.MATERIAL_VALUES.get(p.piece_type.value, 0) for p in self.combat.capture_buffer.captured_ai_units)
+                    self.combat_reward = base_reward + material_bonus
                 else:
                     self.combat_reward = config.DEFEAT_REWARD
+                    
                 self.economy.add_gold(self.combat_reward)
                 
                 self.deployment_manager.clear_deployment()
@@ -389,7 +404,20 @@ class GameEngine:
                 if self.board.is_occupied(row, col):
                     piece = self.board.grid[row][col]
                     is_player = self.combat.is_player_piece(piece) or (self.state == GameState.DEPLOYMENT and self.deployment_manager.roster.get_piece(piece.id))
-                    self._draw_piece(piece.piece_type.value, is_player, rect)
+                    
+                    # Fog of War masking
+                    mask_piece = False
+                    if self.state == GameState.DEPLOYMENT and row in config.AI_DEPLOY_ROWS:
+                        mask_piece = True
+                        
+                    if not mask_piece:
+                        if self.state == GameState.COMBAT and piece.piece_type.value == "King":
+                            if self.combat.is_king_guarded(is_player):
+                                aura = pygame.Surface((config.GRID_SQUARE_SIZE, config.GRID_SQUARE_SIZE), pygame.SRCALPHA)
+                                aura.fill((218, 165, 32, 120))
+                                self.screen.blit(aura, rect)
+                                
+                        self._draw_piece(piece.piece_type.value, is_player, rect)
                 
                 # Hover and Selection Highlight
                 if hover_grid == (row, col) and (self.state in [GameState.DEPLOYMENT, GameState.COMBAT]):
@@ -450,8 +478,9 @@ class GameEngine:
         self.screen.blit(reward_txt, (20, 60))
         
         cas_title = self.font.render("Casualty Report:", True, (200, 200, 200))
-        self.screen.blit(cas_title, (20, 120))
+        self.screen.blit(cas_title, (20, 100))
         
+        y_offset = 130
         for i, (piece, outcome) in enumerate(self.casualty_results):
             if outcome == "HEALTHY":
                 color = (150, 255, 150)
@@ -464,8 +493,25 @@ class GameEngine:
                 info = "Removed from company"
                 
             cas_str = f"{piece.piece_type.value} (ID: {str(piece.id)[:8]}...): {outcome} - {info}"
-            cas_surf = self.font.render(cas_str, True, color)
-            self.screen.blit(cas_surf, (20, 160 + i * 40))
+            cas_surf = self.small_font.render(cas_str, True, color)
+            self.screen.blit(cas_surf, (20, y_offset))
+            y_offset += 25
+            
+        for piece in self.combat.dead_in_retreat:
+            cas_str = f"{piece.piece_type.value} (ID: {str(piece.id)[:8]}...): DEAD - Abandoned in Retreat"
+            cas_surf = self.small_font.render(cas_str, True, (255, 50, 50))
+            self.screen.blit(cas_surf, (20, y_offset))
+            y_offset += 25
+            
+        if self.recruited_captives:
+            def_title = self.font.render("Defectors Recruited:", True, (100, 255, 100))
+            self.screen.blit(def_title, (500, 100))
+            def_y = 130
+            for piece in self.recruited_captives:
+                def_str = f"+ {piece.piece_type.value}"
+                def_surf = self.small_font.render(def_str, True, (200, 255, 200))
+                self.screen.blit(def_surf, (500, def_y))
+                def_y += 25
         
     def draw_game_over_ui(self):
         msg1 = self.font.render("GAME OVER", True, (255, 0, 0))

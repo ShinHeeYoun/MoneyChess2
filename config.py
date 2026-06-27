@@ -38,6 +38,10 @@ SHOP_REROLL_COST = 10
 # Combat Rewards
 BASE_VICTORY_REWARD = 200
 DEFEAT_REWARD = 50
+MATERIAL_VALUES = {"Pawn": 10, "Knight": 30, "Bishop": 30, "Rook": 50, "Queen": 90, "King": 0}
+
+# Captive System
+CAPTIVE_RECRUIT_CHANCE = 10
 
 # Victory Condition
 VICTORY_CONDITION = "ELIMINATE_KING"
@@ -70,9 +74,9 @@ AI_FORMATIONS = {
 # Unit Economy & Properties
 UNIT_DATA = {
     "Pawn": {
-        "buy_cost": 50,
-        "sell_value": 25,
-        "upkeep": 1,
+        "buy_cost": 10,
+        "sell_value": 5,
+        "upkeep": 0,
         "recovery_min": 1,
         "recovery_max": 1,
         "shop_weight": 0

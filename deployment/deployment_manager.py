@@ -14,6 +14,7 @@ class DeploymentManager:
         # Track pieces that have been placed on the board by the player
         # Maps piece.id to (row, col)
         self.placed_pieces = {}
+        self.drag_source_pos = None
         
     def get_unplaced_active_units(self):
         active_units = self.roster.get_active_units()
@@ -54,11 +55,13 @@ class DeploymentManager:
                 # Make sure it's a player piece (id in roster)
                 if self.roster.get_piece(piece.id):
                     self.dragging_piece = self.board.remove_piece(row, col)
+                    self.drag_source_pos = (row, col)
                     if self.dragging_piece.id in self.placed_pieces:
                         del self.placed_pieces[self.dragging_piece.id]
                     return
                     
         # Check if clicking on the unplaced roster sidebar
+        self.drag_source_pos = None
         unplaced = self.get_unplaced_active_units()
         sidebar_x = 20
         sidebar_y_start = 200
@@ -92,10 +95,15 @@ class DeploymentManager:
                             self.board.place_piece(self.dragging_piece, row, col)
                             self.placed_pieces[self.dragging_piece.id] = (row, col)
                             
-                            # Resident piece goes back to cursor/sidebar (effectively unplaced)
-                            # Do not re-assign dragging_piece to resident so we don't hold it, just leave it unplaced
+                            # Check if the dragged piece came from the board (grid-to-grid swap)
+                            if self.drag_source_pos:
+                                src_row, src_col = self.drag_source_pos
+                                self.board.place_piece(resident_piece, src_row, src_col)
+                                self.placed_pieces[resident_piece.id] = (src_row, src_col)
+                            # Else resident piece goes back to cursor/sidebar (effectively unplaced)
                             
             self.dragging_piece = None
+            self.drag_source_pos = None
             
     def clear_deployment(self):
         self.board.clear()

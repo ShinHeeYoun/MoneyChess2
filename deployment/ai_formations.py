@@ -16,17 +16,17 @@ class AIFormationGenerator:
         preview_counts = {}
         ai_pieces = []
         
-        for col, piece_str in enumerate(template["back_row"]):
-            if piece_str:
-                cost = config.UNIT_DATA[piece_str]["buy_cost"]
-                if piece_str == "King" or budget >= cost:
-                    ai_pieces.append(PieceType(piece_str))
-                    budget -= cost
-                    
         for col, piece_str in enumerate(template["front_row"]):
             if piece_str:
                 cost = config.UNIT_DATA[piece_str]["buy_cost"]
                 if budget >= cost:
+                    ai_pieces.append(PieceType(piece_str))
+                    budget -= cost
+                    
+        for col, piece_str in enumerate(template["back_row"]):
+            if piece_str:
+                cost = config.UNIT_DATA[piece_str]["buy_cost"]
+                if piece_str == "King" or budget >= cost:
                     ai_pieces.append(PieceType(piece_str))
                     budget -= cost
                     

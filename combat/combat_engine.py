@@ -7,6 +7,7 @@ from combat.move_validation import get_valid_moves
 from combat.capture_events import CaptureBuffer
 from deployment.deployment_manager import DeploymentManager
 from deployment.ai_formations import AIFormationGenerator
+from units.piece import PieceStatus
 
 class CombatEngine:
     def __init__(self, board: BoardGrid, deployment_mgr: DeploymentManager, ai_gen: AIFormationGenerator):
@@ -21,13 +22,16 @@ class CombatEngine:
         self.valid_moves = []
         
         self.outcome = None # "VICTORY" or "DEFEAT"
+        self.dead_in_retreat = []
         
     def start_combat(self):
         self.capture_buffer.clear()
         self.is_player_turn = True
         self.selected_pos = None
+        self.selected_pos = None
         self.valid_moves = []
         self.outcome = None
+        self.dead_in_retreat = []
         
     def is_player_piece(self, piece):
         return piece.id in self.deployment_mgr.placed_pieces
@@ -41,6 +45,14 @@ class CombatEngine:
         
     def get_ai_pieces_list(self):
         return self.ai_gen.ai_pieces
+        
+    def is_king_guarded(self, is_player):
+        pieces = self.get_player_pieces_list() if is_player else self.get_ai_pieces_list()
+        nobles = [PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN]
+        for p in pieces:
+            if p.piece_type in nobles:
+                return True
+        return False
         
     def check_victory_condition(self):
         player_pieces = self.get_player_pieces_list()
@@ -60,29 +72,38 @@ class CombatEngine:
                 return "VICTORY"
         return None
         
-    def handle_click(self, row: int, col: int):
+    def handle_mouse_down(self, row: int, col: int):
         if not self.is_player_turn or self.outcome:
             return
             
         piece = self.board.grid[row][col]
         
+        # If we click on an allied piece, we select it, overriding any current selection.
+        if piece and self.is_player_piece(piece):
+            self.selected_pos = (row, col)
+            self.valid_moves = get_valid_moves(self.board, row, col, True, self.get_player_pieces_list(), self.get_ai_pieces_list())
+        elif self.selected_pos and (row, col) in self.valid_moves:
+            # Click-to-Move execution
+            self.execute_move(self.selected_pos, (row, col))
+            self.selected_pos = None
+            self.valid_moves = []
+            self.check_end_turn()
+        else:
+            self.selected_pos = None
+            self.valid_moves = []
+
+    def handle_mouse_up(self, row: int, col: int):
+        if not self.is_player_turn or self.outcome:
+            return
+            
         if self.selected_pos:
-            if (row, col) in self.valid_moves:
+            # Drag-to-Move execution
+            if self.selected_pos != (row, col) and (row, col) in self.valid_moves:
                 self.execute_move(self.selected_pos, (row, col))
                 self.selected_pos = None
                 self.valid_moves = []
                 self.check_end_turn()
-            else:
-                if piece and self.is_player_piece(piece):
-                    self.selected_pos = (row, col)
-                    self.valid_moves = get_valid_moves(self.board, row, col, True, self.get_player_pieces_list(), self.get_ai_pieces_list())
-                else:
-                    self.selected_pos = None
-                    self.valid_moves = []
-        else:
-            if piece and self.is_player_piece(piece):
-                self.selected_pos = (row, col)
-                self.valid_moves = get_valid_moves(self.board, row, col, True, self.get_player_pieces_list(), self.get_ai_pieces_list())
+            # If they release on the exact same tile or an invalid tile, DO NOTHING (keep focus for Click-to-Move).
                 
     def execute_move(self, start_pos, target_pos):
         start_row, start_col = start_pos
@@ -145,3 +166,19 @@ class CombatEngine:
             self.execute_move(move['start'], move['target'])
             
         self.check_end_turn()
+        
+    def execute_retreat(self):
+        self.outcome = "DEFEAT"
+        self.dead_in_retreat = []
+        player_pieces = self.get_player_pieces_list()
+        for piece in player_pieces:
+            row, col = self.deployment_mgr.placed_pieces[piece.id]
+            success_chance = 100 - (7 - row) * 5
+            roll = random.randint(1, 100)
+            if roll > success_chance:
+                # Permadeath
+                piece.status = PieceStatus.DEAD
+                self.deployment_mgr.roster.remove_piece(piece.id)
+                self.dead_in_retreat.append(piece)
+                del self.deployment_mgr.placed_pieces[piece.id]
+                self.board.grid[row][col] = None
