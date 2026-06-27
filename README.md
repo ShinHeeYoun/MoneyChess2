@@ -141,3 +141,6 @@ MoneyChess2 is a modular, turn-based strategic mercenary management game where p
 ## [2026-06-27] Phase 11: UI Partitions, Chess.com Palette, and Robust Drag-and-Drop
 - Engineered strict container-based layout partitioning inside core/engine.py utilizing absolute config Rects (LEFT_PANEL_RECT, CENTER_BOARD_RECT, RIGHT_PANEL_RECT) to permanently resolve collision overlaps.\n- Integrated modern tactical palette alongside Chess.com Emerald Green tile mappings.\n- Refactored ui/button.py rendering pipeline to support border_radius and dynamic hover alpha border overlays.\n- Finalized Path A Drag-and-Drop mechanics integrating absolute source-coordinate caching in deployment and combat with dynamic snap-back subroutines for invalid drops.\n- Implemented 'Lifted Piece' alpha blending and scaling inside the primary draw pipeline for active dragging.
 
+## [2026-06-27] Patch 11.1: Confirm & Proceed Crash Fix
+- Resolved a critical AttributeError crash occurring in action_return_to_camp caused by an invalid attribute reference (self.roster.units). Refactored to legally parse self.roster.pieces, restoring stable state transition out of the Resolution phase.
+

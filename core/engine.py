@@ -298,7 +298,7 @@ class GameEngine:
         
         # King Status Visibility Guard
         king = None
-        for p in self.roster.units:
+        for p in self.roster.pieces:
             if p.piece_type.value == "King":
                 king = p
                 break
