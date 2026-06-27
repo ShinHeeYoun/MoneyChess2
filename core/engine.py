@@ -11,14 +11,18 @@ from deployment.deployment_manager import DeploymentManager
 from deployment.ai_formations import AIFormationGenerator
 from combat.combat_engine import CombatEngine
 from casualty.hospital_system import CasualtyProcessor
-from persistence.save_manager import SaveManager
 from ui.button import UIButton
+from ui.animation_engine import AnimationEngine
+from persistence.save_manager import SaveManager
+from units.piece import PieceStatus
 
 class GameEngine:
     def __init__(self, screen: pygame.Surface):
         self.screen = screen
+        self.window = screen
         self.state = GameState.MAIN_MENU
         self.running = True
+        self.clock = pygame.time.Clock()
         
         pygame.font.init()
         self.font = pygame.font.SysFont(None, 36)
@@ -28,7 +32,7 @@ class GameEngine:
         
         self.roster = RosterManager()
         self.economy = EconomyManager()
-        self.shop = ShopManager(self.economy, self.roster)
+        self.shop_manager = ShopManager(self.economy, self.roster)
         
         self.board = BoardGrid()
         self.deployment_manager = DeploymentManager(self.board, self.roster)
@@ -36,11 +40,14 @@ class GameEngine:
         
         self.combat = CombatEngine(self.board, self.deployment_manager, self.ai_generator)
         self.hospital = CasualtyProcessor()
+        self.anim_engine = AnimationEngine()
         
         self.casualty_results = []
         self.recruited_captives = []
         self.combat_reward = 0
         self.ai_turn_start_time = 0
+        self.prev_ai_captures = 0
+        self.prev_player_captures = 0
         
         self.buttons = []
         self.contract_previews = []
@@ -49,7 +56,7 @@ class GameEngine:
         self.assets = {}
         self._load_assets()
         
-        self.shop.generate_shop()
+        self.shop_manager.generate_shop()
         self._build_ui_for_state()
         
     def _load_assets(self):
@@ -103,26 +110,37 @@ class GameEngine:
                 self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH//2 - 100, 370, 200, 50), "Load Game", self.font, self.action_load_game))
                 
         elif self.state == GameState.MANAGEMENT:
-            self.buttons.append(UIButton(pygame.Rect(20, 110, 200, 30), f"Reroll ({config.SHOP_REROLL_COST}g)", self.small_font, self.action_reroll))
+            self.buttons.append(UIButton(pygame.Rect(50, 60, 200, 50), "Reroll Shop (-10g)", self.font, self.action_reroll))
+            self.buttons.append(UIButton(pygame.Rect(50, 400, 200, 50), "Recruit Pawn (10g)", self.font, self.action_buy_pawn))
+            self.buttons.append(UIButton(pygame.Rect(300, 400, 200, 50), "Proceed to Map", self.font, self.action_proceed_to_map))
             
-            # Unlimited Pawn Button
-            pawn_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
-            self.buttons.append(UIButton(pygame.Rect(240, 110, 200, 30), f"Recruit Pawn ({pawn_cost}g)", self.small_font, self.action_buy_pawn))
-            
-            for i, piece_type in enumerate(self.shop.current_shop):
+            for i, piece_type in enumerate(self.shop_manager.current_shop):
                 cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
-                rect = pygame.Rect(20, 150 + i * 40, 200, 30)
-                self.buttons.append(UIButton(rect, f"Buy {piece_type.value} ({cost}g)", self.small_font, self.action_buy_piece, (i,)))
-            
+                rect = pygame.Rect(50, 150 + i * 40, 200, 30)
+                text = f"Buy {piece_type.value} (-{cost}g)"
+                self.buttons.append(UIButton(rect, text, self.small_font, self.action_buy_piece, (i,)))
+                
             active = self.roster.get_active_units()
-            sellable_index = 0
+            
+            # Grouping Logic for Aggregation
+            grouped = {}
             for piece in active:
                 if piece.piece_type.value == "King":
                     continue
-                if sellable_index >= 10:
+                pt_val = piece.piece_type.value
+                if pt_val not in grouped:
+                    grouped[pt_val] = []
+                grouped[pt_val].append(piece)
+                
+            sellable_index = 0
+            for pt_val, pieces in grouped.items():
+                if sellable_index >= 12:
                     break
-                rect = pygame.Rect(700, 150 + sellable_index * 40, 200, 30)
-                self.buttons.append(UIButton(rect, f"Sell {piece.piece_type.value} (+{piece.sell_value}g)", self.small_font, self.action_sell_piece, (piece.id,)))
+                count = len(pieces)
+                sample = pieces[0]
+                rect = pygame.Rect(700, 220 + sellable_index * 40, 250, 30)
+                text = f"{pt_val} x{count} (Sell: +{sample.sell_value}g)"
+                self.buttons.append(UIButton(rect, text, self.small_font, self.action_sell_piece, (sample.id,)))
                 sellable_index += 1
                 
             self.buttons.append(UIButton(pygame.Rect(config.WINDOW_WIDTH - 200, config.WINDOW_HEIGHT - 80, 150, 40), "Next Stage", self.font, self.action_next_stage))
@@ -168,40 +186,61 @@ class GameEngine:
         king = ChessPiece(PieceType.KING)
         self.roster.add_piece(king)
         
-        self.shop.generate_shop()
+        self.shop_manager.generate_shop()
         self.state = GameState.MANAGEMENT
         self._build_ui_for_state()
         
     def action_load_game(self):
         self.current_stage = SaveManager.load_game(self.economy, self.roster)
-        self.shop.generate_shop()
+        self.shop_manager.generate_shop()
         self.state = GameState.MANAGEMENT
         self._build_ui_for_state()
         
     def action_reroll(self):
-        if self.shop.reroll_shop():
+        if self.shop_manager.reroll_shop():
             self._build_ui_for_state()
             
     def action_buy_piece(self, index):
-        if self.shop.buy_piece(index):
+        if self.economy.is_bankrupt:
+            self.anim_engine.start_shake(10.0)
+            return
+            
+        piece_type = self.shop_manager.current_shop[index]
+        cost = config.UNIT_DATA[piece_type.value]["buy_cost"]
+        if self.shop_manager.buy_piece(index):
+            self.anim_engine.spawn_floating_text(150, 150 + index * 40, f"-{cost}g", self.font, (255, 50, 50))
             self._build_ui_for_state()
             
     def action_buy_pawn(self):
-        from units.piece import PieceType, ChessPiece
-        pawn_cost = config.UNIT_DATA["Pawn"]["buy_cost"]
-        if not self.economy.is_bankrupt and self.economy.subtract_gold(pawn_cost):
-            piece = ChessPiece(PieceType.PAWN)
-            self.roster.add_piece(piece)
+        if self.economy.is_bankrupt:
+            self.anim_engine.start_shake(10.0)
+            return
+            
+        cost = config.UNIT_DATA["Pawn"]["buy_cost"]
+        if self.economy.subtract_gold(cost):
+            from units.piece import PieceType, ChessPiece
+            new_pawn = ChessPiece(PieceType("Pawn"))
+            self.roster.add_piece(new_pawn)
+            self.anim_engine.spawn_floating_text(150, 400, f"-{cost}g", self.font, (255, 50, 50))
             self._build_ui_for_state()
             
     def action_sell_piece(self, piece_id):
-        if self.shop.sell_piece(piece_id):
-            self._build_ui_for_state()
+        piece = self.roster.get_piece(piece_id)
+        if piece:
+            val = piece.sell_value
+            if self.shop_manager.sell_piece(piece_id):
+                # We do not have the exact rect pos here easily, spawn near top of list
+                self.anim_engine.spawn_floating_text(800, 250, f"+{val}g", self.font, (50, 255, 50))
+                self._build_ui_for_state() # Crucial for Zero-Count Eviction
             
     def action_next_stage(self):
         if not self.economy.is_bankrupt:
             self.state = GameState.STAGE_SELECT
             self._build_ui_for_state()
+            
+    def action_proceed_to_map(self):
+        self.state = GameState.STAGE_SELECT
+        self._build_ui_for_state()
             
     def action_select_contract(self, index):
         self.selected_contract = self.contract_previews[index]
@@ -211,28 +250,27 @@ class GameEngine:
         self._build_ui_for_state()
         
     def action_start_combat(self):
-        # Deployment Guard: King Requirement
-        placed_pids = self.deployment_manager.placed_pieces.keys()
-        placed_pieces = [self.roster.get_piece(pid) for pid in placed_pids]
-        
-        has_king = False
-        for p in placed_pieces:
+        # Validate King is deployed
+        king_deployed = False
+        for piece in self.deployment_manager.placed_pieces.keys():
+            p = self.roster.get_piece(piece)
             if p and p.piece_type.value == "King":
-                has_king = True
+                king_deployed = True
                 break
                 
-        if not has_king:
-            print("DEPLOYMENT WARNING: You must deploy your King on the active grid before commencing battle!")
+        if not king_deployed:
+            print("Cannot start combat: Commander (King) is not deployed!")
+            self.anim_engine.start_shake(15.0)
             return
             
-        # Fallback Check: Ensure AI pieces populate the board
-        if not self.ai_generator.ai_pieces:
-            print("FALLBACK: Regenerating AI Formation")
-            if self.selected_contract:
-                self.ai_generator.apply_formation(self.selected_contract["preview"])
-            
+        if len(self.combat.get_ai_pieces_list()) == 0:
+            print("WARNING: Zero enemy units detected! Forcing AI regeneration.")
+            self.ai_generator.apply_formation(self.selected_contract["ai_preview"])
+
         self.state = GameState.COMBAT
         self.combat.start_combat()
+        self.prev_ai_captures = 0
+        self.prev_player_captures = 0
         self._build_ui_for_state()
         
     def action_retreat(self):
@@ -246,14 +284,36 @@ class GameEngine:
         self.roster.tick_hospital_turns()
         self.economy.process_upkeep(self.roster)
         
-        active_count = len(self.roster.get_active_units())
-        injured_count = len(self.roster.get_injured_units())
-        if self.economy.current_gold <= 0 and active_count == 0 and injured_count == 0:
+        act_count = len(self.roster.get_active_units())
+        inj_count = len(self.roster.get_injured_units())
+        ros_txt = self.font.render(f"Roster (Active: {act_count}, Injured: {inj_count})", True, (255, 255, 255))
+        self.screen.blit(ros_txt, (700, 20))
+        
+        # King Status Visibility Guard
+        king = None
+        for p in self.roster.units:
+            if p.piece_type.value == "King":
+                king = p
+                break
+                
+        if king:
+            if king.status == PieceStatus.ACTIVE:
+                status_str = "Status: ACTIVE"
+                color = (150, 255, 150)
+            else:
+                status_str = f"Status: INJURED ({king.current_injury_turns} turns left)"
+                color = (255, 150, 150)
+            king_txt = self.small_font.render(f"Commander (King) - {status_str}", True, color)
+            self.screen.blit(king_txt, (700, 80))
+            
+        pygame.draw.line(self.screen, (100, 100, 100), (700, 120), (950, 120))
+        
+        if self.economy.current_gold <= 0 and act_count == 0 and inj_count == 0:
             self.state = GameState.GAME_OVER
         else:
             self.state = GameState.MANAGEMENT
             SaveManager.save_game(self.economy, self.roster, self.current_stage)
-            self.shop.generate_shop()
+            self.shop_manager.generate_shop()
             
         self._build_ui_for_state()
 
@@ -317,33 +377,46 @@ class GameEngine:
                     self.combat_reward = config.DEFEAT_REWARD
                     
                 self.economy.add_gold(self.combat_reward)
+                self.anim_engine.spawn_floating_text(config.WINDOW_WIDTH//2, config.WINDOW_HEIGHT//2, f"+{self.combat_reward}g", self.font, (255, 215, 0), 2.5)
                 
                 self.deployment_manager.clear_deployment()
                 self.state = GameState.RESOLUTION
                 self._build_ui_for_state()
+                
+            else:
+                # Still in combat, check for captures to trigger screen shake
+                cur_ai_caps = len(self.combat.capture_buffer.captured_ai_units)
+                cur_player_caps = len(self.combat.capture_buffer.captured_player_units)
+                if cur_ai_caps > self.prev_ai_captures or cur_player_caps > self.prev_player_captures:
+                    self.anim_engine.start_shake(15.0)
+                self.prev_ai_captures = cur_ai_caps
+                self.prev_player_captures = cur_player_caps
+                
+        self.anim_engine.update(dt)
         
-    def draw(self):
-        self.screen.fill((30, 30, 30))
+    def draw(self, dt: float):
+        self.screen.fill(config.BACKGROUND_COLOR)
         
-        if self.state == GameState.MAIN_MENU:
-            self.draw_main_menu_ui()
-        elif self.state == GameState.MANAGEMENT:
+        if self.state == GameState.MANAGEMENT:
             self.draw_management_ui()
         elif self.state == GameState.STAGE_SELECT:
             self.draw_stage_select_ui()
-        elif self.state == GameState.DEPLOYMENT:
-            self.draw_deployment_ui()
-        elif self.state == GameState.COMBAT:
-            self.draw_combat_ui()
+        elif self.state in [GameState.DEPLOYMENT, GameState.COMBAT]:
+            self.draw_board()
         elif self.state == GameState.RESOLUTION:
+            # Draw board underneath
+            self.draw_board()
             self.draw_resolution_ui()
         elif self.state == GameState.GAME_OVER:
             self.draw_game_over_ui()
             
-        # Draw buttons
         for btn in self.buttons:
-            btn.draw(self.screen)
+            btn.draw(self.screen, dt)
             
+        self.anim_engine.draw(self.screen)
+            
+        self.window.fill((0,0,0))
+        self.window.blit(self.screen, self.anim_engine.get_shake_offset())
         pygame.display.flip()
         
     def draw_main_menu_ui(self):
@@ -518,3 +591,10 @@ class GameEngine:
         msg2 = self.font.render("Your company is bankrupt and has no remaining active or hospital units.", True, (200, 200, 200))
         self.screen.blit(msg1, (config.WINDOW_WIDTH // 2 - 100, config.WINDOW_HEIGHT // 2 - 40))
         self.screen.blit(msg2, (config.WINDOW_WIDTH // 2 - 400, config.WINDOW_HEIGHT // 2))
+
+    def run(self):
+        while self.running:
+            dt = self.clock.tick(60) / 1000.0
+            self.handle_events(pygame.event.get())
+            self.update(dt)
+            self.draw(dt)

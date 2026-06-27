@@ -9,9 +9,23 @@ class UIButton:
         self.callback = callback
         self.callback_args = callback_args if callback_args else ()
         self.is_hovered = False
+        self.hover_factor = 0.0
         
-    def draw(self, surface: pygame.Surface):
-        color = config.BUTTON_COLOR_HOVER if self.is_hovered else config.BUTTON_COLOR_NEUTRAL
+    def _lerp_color(self, c1, c2, t):
+        return (
+            int(c1[0] + (c2[0] - c1[0]) * t),
+            int(c1[1] + (c2[1] - c1[1]) * t),
+            int(c1[2] + (c2[2] - c1[2]) * t)
+        )
+        
+    def draw(self, surface: pygame.Surface, dt: float = 1/60.0):
+        # Update hover_factor
+        if self.is_hovered:
+            self.hover_factor = min(1.0, self.hover_factor + dt * 5.0) # Reach 1.0 in ~0.2s
+        else:
+            self.hover_factor = max(0.0, self.hover_factor - dt * 5.0)
+            
+        color = self._lerp_color(config.BUTTON_COLOR_NEUTRAL, config.BUTTON_COLOR_HOVER, self.hover_factor)
         pygame.draw.rect(surface, color, self.rect)
         pygame.draw.rect(surface, (200, 200, 200), self.rect, 2)
         
